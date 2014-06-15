@@ -14,7 +14,7 @@ typedef struct {
     unsigned int currentPos;
     unsigned int pos;
     unsigned int blockPos;
-    t2fs_record record;
+    struct t2fs_record record;
 } file;
 
 unsigned int diskInitialized = 0;
@@ -25,7 +25,7 @@ unsigned short diskBlockSize;
 unsigned short diskFreeBlockSize;
 unsigned short diskRootSize;
 unsigned short diskFileEntrySize;
-t2fs_find superblock;
+struct t2fs_superbloco superblock;
 
 file *files[20];
 int countFiles = 0;
@@ -34,16 +34,16 @@ char *t2fs_identify(void){
     char *str = malloc(sizeof(char) * 36);
 
     // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
     str = memcpy(str, "Otavio (180470) - Lisandro (143764)\0", 36);
 
     return str;
 }
 
-void initDisk(t2fs_find *sblock){
+void initDisk(struct t2fs_superbloco *sblock){
     diskVersion = sblock->version;
     diskCtrlSize = sblock->ctrlSize;
     diskSize = *(unsigned int *) sblock->diskSize;
@@ -64,7 +64,7 @@ void initDisk(t2fs_find *sblock){
     diskInitialized = 1;
 }
 
-int t2fs_first(t2fs_find *findStruct){
+int t2fs_first(t2fs_superbloco *findStruct){
     int status_read;
     char *find = malloc(MAX_BLOCK_SIZE);
 
@@ -74,7 +74,7 @@ int t2fs_first(t2fs_find *findStruct){
         return -1;
     }
     else {
-        memcpy(findStruct, find, sizeof(t2fs_find));
+        memcpy(findStruct, find, sizeof(t2fs_superbloco));
     }
 
     if(!diskInitialized){
@@ -102,7 +102,7 @@ char *validateFilename(char *name){
     return validatedName;
 }
 
-int t2fs_next(t2fs_find *find, t2fs_record *rec){
+int t2fs_next(t2fs_superbloco *find, t2fs_record *rec){
     /*printf("entrou t2fs_next\n");*/
 
     // Inicializa o disco
