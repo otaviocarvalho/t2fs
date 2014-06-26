@@ -31,26 +31,26 @@ file *files[20];
 int countFiles = 0;
 
 char *t2fs_identify(void){
-    char *str = malloc(sizeof(char) * 36);
+    char *str = malloc(sizeof(char) * 90);
 
     // Inicializa o disco
     /*if(!diskInitialized){*/
         /*t2fs_first(&superblock);*/
     /*}*/
 
-    str = memcpy(str, "Otavio (180470) - Lisandro (143764)\0", 36);
+    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline ()\0", 90);
 
     return str;
 }
 
 void initDisk(struct t2fs_superbloco *sblock){
-    diskVersion = sblock->version;
-    diskCtrlSize = sblock->ctrlSize;
-    diskSize = *(unsigned int *) sblock->diskSize;
-    diskBlockSize = *(unsigned short *) sblock->blockSize;
-    diskFreeBlockSize = *(unsigned short *) sblock->freeBlockSize;
-    diskRootSize = *(unsigned short *) sblock->rootSize;
-    diskFileEntrySize = *(unsigned short *) sblock->fileEntrySize;
+    /*diskVersion = sblock->version;*/
+    /*diskCtrlSize = sblock->ctrlSize;*/
+    /*diskSize = *(unsigned int *) sblock->diskSize;*/
+    /*diskBlockSize = *(unsigned short *) sblock->blockSize;*/
+    /*diskFreeBlockSize = *(unsigned short *) sblock->freeBlockSize;*/
+    /*diskRootSize = *(unsigned short *) sblock->rootSize;*/
+    /*diskFileEntrySize = *(unsigned short *) sblock->fileEntrySize;*/
 
     /*printf("read superblock struct: %c%c%c%c\n", sblock->id[0], sblock->id[1], sblock->id[2], sblock->id[3]);*/
     /*printf("version: %x\n", diskVersion);*/
@@ -64,17 +64,18 @@ void initDisk(struct t2fs_superbloco *sblock){
     diskInitialized = 1;
 }
 
-int t2fs_first(t2fs_superbloco *findStruct){
+int t2fs_first(struct t2fs_superbloco *findStruct){
     int status_read;
     char *find = malloc(MAX_BLOCK_SIZE);
 
-    status_read = read_block(0, find);
+    /*status_read = read_block(0, find);*/
+    status_read = read_sector(0, find);
 
     if (status_read != 0){
         return -1;
     }
     else {
-        memcpy(findStruct, find, sizeof(t2fs_superbloco));
+        memcpy(findStruct, find, sizeof(struct t2fs_superbloco));
     }
 
     if(!diskInitialized){
@@ -102,7 +103,7 @@ char *validateFilename(char *name){
     return validatedName;
 }
 
-int t2fs_next(t2fs_superbloco *find, t2fs_record *rec){
+int t2fs_next(struct t2fs_superbloco *find, struct t2fs_record *rec){
     /*printf("entrou t2fs_next\n");*/
 
     // Inicializa o disco
@@ -119,20 +120,21 @@ int t2fs_next(t2fs_superbloco *find, t2fs_record *rec){
     int posRootBlock = diskCtrlSize + diskFreeBlockSize;
 
     // Verifica se já encontrou o primeiro arquivo válido
-    if (find->fileName == NULL){
-        /*printf("ENTROU NULL\n");*/
-        firstValid = 1;
-        blockPos = 0;
-        offsetBlockPos = 0;
-    }
-    else {
-        blockPos = find->blockPos;
-        offsetBlockPos = find->offsetBlockPos;
-    }
+    /*if (find->fileName == NULL){*/
+        /*[>printf("ENTROU NULL\n");<]*/
+        /*firstValid = 1;*/
+        /*blockPos = 0;*/
+        /*offsetBlockPos = 0;*/
+    /*}*/
+    /*else {*/
+        /*blockPos = find->blockPos;*/
+        /*offsetBlockPos = find->offsetBlockPos;*/
+    /*}*/
 
     // Percorre o diretório raiz
     for (i = blockPos; i < diskRootSize; i++) {
-        read_block(posRootBlock + i, block);
+        /*read_block(posRootBlock + i, block);*/
+        read_sector(posRootBlock + i, block);
 
         j = offsetBlockPos;
         while (j < diskBlockSize) {
@@ -142,19 +144,19 @@ int t2fs_next(t2fs_superbloco *find, t2fs_record *rec){
             if (firstValid || findNextValid){
                 // Verifica bit na primeira letra do arquivo
                 if ( ((block + j)[0] & 0x80) == 0x80){
-                    memcpy(rec, block+j, sizeof(t2fs_record));
+                    memcpy(rec, block+j, sizeof(struct t2fs_record));
 
                     // Cria record auxiliar para receber o bloco atual
-                    t2fs_record *recAux = malloc(sizeof(t2fs_record));
-                    memcpy(recAux, block+j, sizeof(t2fs_record));
+                    struct t2fs_record *recAux = malloc(sizeof(struct t2fs_record));
+                    memcpy(recAux, block+j, sizeof(struct t2fs_record));
 
                     // Copia nome do arquivo para estrutura find
-                    find->fileName = malloc(40*sizeof(char));
-                    memcpy(find->fileName, recAux->name, 40*sizeof(char));
+                    /*find->fileName = malloc(40*sizeof(char));*/
+                    /*memcpy(find->fileName, recAux->name, 40*sizeof(char));*/
 
                     // Acerta ponteiros para que retornem no mesmo ponto
-                    find->blockPos = i;
-                    find->offsetBlockPos = j;
+                    /*find->blockPos = i;*/
+                    /*find->offsetBlockPos = j;*/
 
                     /*printf("Encontrou %s e retornou %x\n", find->fileName, (unsigned char) find->fileName[0]);*/
                     /*printf("i %d j %d\n", find->blockPos, find->offsetBlockPos);*/
@@ -163,10 +165,10 @@ int t2fs_next(t2fs_superbloco *find, t2fs_record *rec){
                 }
             }
             // Se for para encontrar o arquivo válido atual
-            else if (strcmp(block + j, find->fileName) == 0){
+            /*else if (strcmp(block + j, find->fileName) == 0){*/
                 /*printf("FOUND WORD %s\n", find->fileName);*/
-                findNextValid = 1;
-            }
+                /*findNextValid = 1;*/
+            /*}*/
 
             j = j + diskFileEntrySize;
         }
@@ -183,7 +185,8 @@ int markBitmap(int pos, short int setbit){
 
     // Encontra posição do bloco no bitmap
     posBlock = diskCtrlSize + (pos / (8 * diskBlockSize));
-    read_block(posBlock, block);
+    /*read_block(posBlock, block);*/
+    read_sector(posBlock, block);
 
     // Encontra byte e bit especifico a serem modificados
     posByte = posBlock / 8;
@@ -200,7 +203,7 @@ int markBitmap(int pos, short int setbit){
     return 0;
 }
 
-int diskInsertRecord(t2fs_record *record){
+int diskInsertRecord(struct t2fs_record *record){
     char block[diskBlockSize];
     int i, j;
     int found = 0;
@@ -209,7 +212,8 @@ int diskInsertRecord(t2fs_record *record){
 
     // Percorre o diretório raiz
     for (i = 0; i < diskRootSize; i++) {
-        read_block(posRootBlock + i, block);
+        /*read_block(posRootBlock + i, block);*/
+        read_sector(posRootBlock + i, block);
 
         /*printf("posRootBlock + i: %d", posRootBlock + i);*/
 
@@ -229,7 +233,8 @@ int diskInsertRecord(t2fs_record *record){
 
         if (found){
             /*printf("criando i = %d arquivo: %s\n", j, record->name);*/
-            write_block(posRootBlock + i, block);
+            /*write_block(posRootBlock + i, block);*/
+            write_sector(posRootBlock + i, block);
             markBitmap(posRootBlock + i, 1);
             return 0;
         }
@@ -296,7 +301,8 @@ t2fs_file t2fs_open(char *name){
 
     // Percorre o diretório raiz
     for (i = 0; i < diskRootSize; i++) {
-        read_block(posRootBlock + i, block);
+        /*read_block(posRootBlock + i, block);*/
+        read_sector(posRootBlock + i, block);
 
         j = 0;
         while (j < diskBlockSize) {
@@ -310,7 +316,7 @@ t2fs_file t2fs_open(char *name){
                 fileFound->currentPos = 0;
                 fileFound->handle = countFiles;
 
-                memcpy(&(fileFound->record), block+j, sizeof(t2fs_record));
+                memcpy(&(fileFound->record), block+j, sizeof(struct t2fs_record));
                 files[countFiles] = fileFound;
 
                 countFiles++;
@@ -398,7 +404,8 @@ int t2fs_delete(char *name){
         // Deleta blocos apontados por ponteiros de indireção simples
         if (numBlocks > 0){
             markBitmap(deleteFile->record.singleIndPtr, 0);
-            read_block(deleteFile->record.singleIndPtr, block);
+            /*read_block(deleteFile->record.singleIndPtr, block);*/
+            read_sector(deleteFile->record.singleIndPtr, block);
 
             for (i = 0; i < diskBlockSize; i++) {
                 if (numBlocks > 0){
@@ -414,9 +421,11 @@ int t2fs_delete(char *name){
         // Deleta blocos apontados por ponteiros de indireção dupla
 
         // Invalida registro pelo bit no nome
-        read_block(deleteFile->pos, block);
+        /*read_block(deleteFile->pos, block);*/
+        read_sector(deleteFile->pos, block);
         block[deleteFile->blockPos] = block[deleteFile->blockPos] & 0x7F;
-        write_block(deleteFile->pos, block);
+        /*write_block(deleteFile->pos, block);*/
+        write_sector(deleteFile->pos, block);
 
         // Fecha arquivo
         t2fs_close(handle);
@@ -461,11 +470,11 @@ int diskReserveBlock(){
     bitmapBlock = diskCtrlSize;
     dataInit = diskCtrlSize + diskFreeBlockSize + diskRootSize;
 
-    read_block(bitmapBlock, block);
+    /*read_block(bitmapBlock, block);*/
     for (i = dataInit; i < diskSize; i++) {
         if (i > (bitmapBlock-diskCtrlSize+1)*diskBlockSize*8){
             bitmapBlock++;
-            read_block(bitmapBlock, block);
+            /*read_block(bitmapBlock, block);*/
         }
 
         posByte = (i - (bitmapBlock-diskCtrlSize)) / 8;
@@ -552,13 +561,13 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
                 }
 
                 // Grava bloco de índice no disco
-                write_block(indBlockAddress, block);
+                /*write_block(indBlockAddress, block);*/
             }
             // Utiliza ponteiro indireto
             else if (actualSize < (diskBlockSize+2)*diskBlockSize){
-                read_block(fileWrite->record.singleIndPtr, block);
+                /*read_block(fileWrite->record.singleIndPtr, block);*/
                 block[fileWrite->record.blocksFileSize - 3] = blockAddress;
-                write_block(fileWrite->record.singleIndPtr, block);
+                /*write_block(fileWrite->record.singleIndPtr, block);*/
             }
             else {
                 printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
@@ -577,7 +586,7 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
                 blockAddress = fileWrite->record.dataPtr[1];
             }
             else if (actualSize < (diskBlockSize+2)*diskBlockSize){
-                read_block(fileWrite->record.singleIndPtr, block);
+                /*read_block(fileWrite->record.singleIndPtr, block);*/
                 blockAddress = block[fileWrite->record.blocksFileSize - 3];
             }
             else {
@@ -587,7 +596,7 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
 
             /*printf("actualSize %d, blockAddress %d, diskBlockSize %d\n", actualSize, blockAddress, diskBlockSize);*/
             // Lê o bloco
-            read_block(blockAddress, block);
+            /*read_block(blockAddress, block);*/
         }
 
         // Preenche o bloco
@@ -601,7 +610,7 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
         }
 
         // Escreve no disco
-        write_block(blockAddress, block);
+        /*write_block(blockAddress, block);*/
         actualSize = origSize + size - sizeLeft;
     }
 
@@ -612,9 +621,9 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
         fileWrite->record.blocksFileSize++;
     }
 
-    read_block(fileWrite->pos, block);
+    /*read_block(fileWrite->pos, block);*/
     memcpy(block+fileWrite->blockPos, &(fileWrite->record), FILE_REGISTER);
-    write_block(fileWrite->pos, block);
+    /*write_block(fileWrite->pos, block);*/
 
     return size;
 }
@@ -651,7 +660,7 @@ int t2fs_read(t2fs_file handle, char *buffer, int size){
             }
             // Indireção simples
             else if (curPos < (diskBlockSize+2)*diskBlockSize){
-                read_block(fileRead->record.singleIndPtr, block);
+                /*read_block(fileRead->record.singleIndPtr, block);*/
                 blockAddress = block[curPos / diskBlockSize - 2];
             }
             // Indireção dupla
@@ -660,7 +669,7 @@ int t2fs_read(t2fs_file handle, char *buffer, int size){
                 return -1;
             }
 
-            read_block(blockAddress, block);
+            /*read_block(blockAddress, block);*/
             blockRead = 1;
         }
 
