@@ -9,6 +9,9 @@
 #define MAX_FILES 20
 #define MAX_FILE_NAME 40
 
+#define SIZE_SECTOR_BYTES 256
+#define SIZE_SUPERBLOCK_BYTES 256
+
 typedef struct {
     t2fs_file handle;
     unsigned int currentPos;
@@ -18,25 +21,36 @@ typedef struct {
 } file;
 
 unsigned int diskInitialized = 0;
-unsigned char diskVersion;
-unsigned char diskCtrlSize;
-unsigned int diskSize;
-unsigned short diskBlockSize;
-unsigned short diskFreeBlockSize;
-unsigned short diskRootSize;
-unsigned short diskFileEntrySize;
+unsigned short diskVersion;
+unsigned short diskSuperBlockSize;
+unsigned long diskSize;
+unsigned long diskBlocksNumber;
+unsigned long diskBlockSize;
+
+/*unsigned char diskVersion;*/
+/*unsigned int diskSize;*/ // Era dado em blocos, agora é em bytes (diskSize / blockSize == diskSizeAnterior)
+/*unsigned short diskBlockSize;*/
+/*unsigned short diskFileEntrySize;*/
+// Substituir estruturas sem equivalência nessa versão
+unsigned char diskCtrlSize; // Não existe, o ctrlSize é determinado pelo SuperBlockSize
+unsigned short diskFreeBlockSize; // Era o tamanho do bitmap, agora o bitmap é passado por parâmetro
+unsigned short diskRootSize; // Era o número de blocos do diretório, agora o diretório é passado por parâmetro
+unsigned short diskFileEntrySize; // Era o tamanho de um registro no diretório. Desnecessário, é o tamanho do t2fs_record
+
 struct t2fs_superbloco superblock;
 
 file *files[20];
 int countFiles = 0;
 
+int t2fs_first(struct t2fs_superbloco *findStruct);
+
 char *t2fs_identify(void){
     char *str = malloc(sizeof(char) * 90);
 
     // Inicializa o disco
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
 
     str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline ()\0", 90);
 
@@ -44,29 +58,28 @@ char *t2fs_identify(void){
 }
 
 void initDisk(struct t2fs_superbloco *sblock){
-    /*diskVersion = sblock->version;*/
-    /*diskCtrlSize = sblock->ctrlSize;*/
-    /*diskSize = *(unsigned int *) sblock->diskSize;*/
-    /*diskBlockSize = *(unsigned short *) sblock->blockSize;*/
-    /*diskFreeBlockSize = *(unsigned short *) sblock->freeBlockSize;*/
-    /*diskRootSize = *(unsigned short *) sblock->rootSize;*/
-    /*diskFileEntrySize = *(unsigned short *) sblock->fileEntrySize;*/
 
-    /*printf("read superblock struct: %c%c%c%c\n", sblock->id[0], sblock->id[1], sblock->id[2], sblock->id[3]);*/
-    /*printf("version: %x\n", diskVersion);*/
-    /*printf("ctrlSize: %x\n", diskCtrlSize);*/
-    /*printf("diskSize: %d\n", diskSize);*/
-    /*printf("blockSize: %d\n", diskBlockSize);*/
-    /*printf("freeBlockSize: %d\n", diskFreeBlockSize);*/
-    /*printf("rootSize: %d\n", diskRootSize);*/
-    /*printf("fileEntrySize: %d\n", diskFileEntrySize);*/
+    diskVersion = (unsigned short) sblock->Version;
+    diskSuperBlockSize = (unsigned short) sblock->SuperBlockSize; // diskSize, tamanho do superbloco em blocos/setores
+    diskSize = (unsigned long) sblock->DiskSize; // blockSize * diskSize, tamanho do disco em bytes
+    diskBlocksNumber = (unsigned long) sblock->NofBlocks;
+    diskBlockSize = (unsigned long) sblock->BlockSize;
+    // BitMapReg
+    // RootDirReg
+
+    printf("read superblock struct: %c%c%c%c\n", sblock->Id[0], sblock->Id[1], sblock->Id[2], sblock->Id[3]);
+    printf("version: %x\n", diskVersion);
+    printf("SuperBlockSize: %d\n", diskSuperBlockSize);
+    printf("diskSize: %ld\n", diskSize);
+    printf("diskBlocksNumber: %ld\n", diskBlocksNumber);
+    printf("blockSize: %ld\n", diskBlockSize);
 
     diskInitialized = 1;
 }
 
 int t2fs_first(struct t2fs_superbloco *findStruct){
     int status_read;
-    char *find = malloc(MAX_BLOCK_SIZE);
+    char *find = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'
 
     /*status_read = read_block(0, find);*/
     status_read = read_sector(0, find);
@@ -629,6 +642,66 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
 }
 
 int t2fs_read(t2fs_file handle, char *buffer, int size){
+    int curPos, blockPos;
+    int blockRead = 0, bytesRead = 0;
+    int blockAddress;
+
+     // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
+
+    char block[diskBlockSize];
+
+    // Inicializa arquivo e variáveis
+    file *fileRead = findFile(handle);
+    curPos = fileRead->currentPos;
+
+    // Lê o tamanho em caracteres passado por parâmetro
+    while (size > 0){
+
+        if (!blockRead){
+            blockPos = curPos % diskBlockSize;
+
+            // Ponteiro direto 1
+            if (curPos < diskBlockSize){
+                blockAddress = fileRead->record.dataPtr[0];
+            }
+            // Ponteiro direto 2
+            else if (curPos < 2*diskBlockSize){
+                blockAddress = fileRead->record.dataPtr[1];
+            }
+            // Indireção simples
+            else if (curPos < (diskBlockSize+2)*diskBlockSize){
+                /*read_block(fileRead->record.singleIndPtr, block);*/
+                blockAddress = block[curPos / diskBlockSize - 2];
+            }
+            // Indireção dupla
+            else {
+                printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
+                return -1;
+            }
+
+            /*read_block(blockAddress, block);*/
+            blockRead = 1;
+        }
+
+        buffer[bytesRead] = block[blockPos-1];
+        bytesRead++;
+        size--;
+
+        curPos++;
+        blockPos++;
+        if (blockPos > diskBlockSize){
+            blockRead = 0;
+        }
+    }
+
+    fileRead->currentPos = curPos;
+    return bytesRead;
+}
+
+int t2fs_read_old(t2fs_file handle, char *buffer, int size){
     int curPos, blockPos;
     int blockRead = 0, bytesRead = 0;
     int blockAddress;
