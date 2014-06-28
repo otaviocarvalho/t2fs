@@ -20,12 +20,14 @@ typedef struct {
     struct t2fs_record record;
 } file;
 
-unsigned int diskInitialized = 0;
+unsigned long int diskInitialized = 0;
 unsigned short diskVersion;
 unsigned short diskSuperBlockSize;
-unsigned long diskSize;
-unsigned long diskBlocksNumber;
-unsigned long diskBlockSize;
+unsigned long int diskSize;
+unsigned long int diskBlocksNumber;
+unsigned long int diskBlockSize;
+struct t2fs_record diskBitMapReg;
+struct t2fs_record diskRootDirReg;
 
 /*unsigned char diskVersion;*/
 /*unsigned int diskSize;*/ // Era dado em blocos, agora é em bytes (diskSize / blockSize == diskSizeAnterior)
@@ -61,11 +63,14 @@ void initDisk(struct t2fs_superbloco *sblock){
 
     diskVersion = (unsigned short) sblock->Version;
     diskSuperBlockSize = (unsigned short) sblock->SuperBlockSize; // diskSize, tamanho do superbloco em blocos/setores
-    diskSize = (unsigned long) sblock->DiskSize; // blockSize * diskSize, tamanho do disco em bytes
-    diskBlocksNumber = (unsigned long) sblock->NofBlocks;
-    diskBlockSize = (unsigned long) sblock->BlockSize;
+    diskSize = (unsigned long int) sblock->DiskSize; // blockSize * diskSize, tamanho do disco em bytes
+    diskBlocksNumber = (unsigned long int) sblock->NofBlocks;
+    diskBlockSize = (unsigned long int) sblock->BlockSize;
     // BitMapReg
+    /*memcpy(diskBitMapReg, sblock->BitMapReg, sizeof(struct t2fs_record));*/
+    diskBitMapReg = sblock->BitMapReg;
     // RootDirReg
+    diskRootDirReg = sblock->RootDirReg;
 
     printf("read superblock struct: %c%c%c%c\n", sblock->Id[0], sblock->Id[1], sblock->Id[2], sblock->Id[3]);
     printf("version: %x\n", diskVersion);
@@ -73,6 +78,10 @@ void initDisk(struct t2fs_superbloco *sblock){
     printf("diskSize: %ld\n", diskSize);
     printf("diskBlocksNumber: %ld\n", diskBlocksNumber);
     printf("blockSize: %ld\n", diskBlockSize);
+    printf("diskRootDirReg name: %s\n", diskRootDirReg.name);
+
+    printf("print bitmap:\n");
+    printf("%b", diskBitMapReg);
 
     diskInitialized = 1;
 }
