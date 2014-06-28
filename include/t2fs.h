@@ -8,8 +8,6 @@ typedef int BOOL;
 #define FALSE 0
 #define TRUE 1
 
-#teste kkk;
-
 typedef int t2fs_file;
 
 #define TYPEVAL_REGULAR     0x01
