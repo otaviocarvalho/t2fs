@@ -137,8 +137,8 @@ void initDisk(struct t2fs_superbloco *sblock){
     /*printf("blockSize: %ld\n", diskBlockSize);*/
     /*printf("diskRootDirReg name: %s\n", diskRootDirReg.name);*/
 
-    // Teste de impressão do t2fs_record do diretório raíz
-    /*printf("\nprint diretório raíz t2fs_record:\n");*/
+    // Teste de impressão do t2fs_record do diretório raiz
+    /*printf("\nprint diretório raiz t2fs_record:\n");*/
     /*printf("%s\n", diskRootDirReg.name);*/
     /*printf("blocksFileSize: %ld\n", (unsigned long int) diskRootDirReg.blocksFileSize);*/
     /*printf("bytesFileSize: %ld\n", (unsigned long int) diskRootDirReg.bytesFileSize);*/
@@ -157,7 +157,7 @@ void initDisk(struct t2fs_superbloco *sblock){
     /*printf("singleIndPtr: %x\n", diskBitMapReg.singleIndPtr);*/
     /*printf("doubleIndPtr: %x\n", diskBitMapReg.doubleIndPtr);*/
 
-    // Teste de leitura do primeiro arquivo do diretório raíz
+    // Teste de leitura do primeiro arquivo do diretório raiz
     /*struct t2fs_record *test_record = malloc(sizeof(struct t2fs_record)) ;*/
     /*memcpy(test_record, &diskRootDirReg.dataPtr[0]+sizeof(struct t2fs_record)*0, sizeof(struct t2fs_record));*/
     /*printf("\nfilename: %s\n", test_record->name);*/
@@ -188,6 +188,9 @@ void initDisk(struct t2fs_superbloco *sblock){
     /*printf("valor do primeiro byte do bitmap lido do disco %x\n", findStruct->BitMapReg.dataPtr[0]);*/
     /*free(find);*/
     /*free(findStruct);*/
+
+    // Teste de leitura de arquivo no diretório raiz
+    /*t2fs_next();*/
 
     diskInitialized = 1;
 }
@@ -307,6 +310,80 @@ int t2fs_next(struct t2fs_superbloco *find, struct t2fs_record *rec){
 
     return 1;
 }
+
+/*int t2fs_next(struct t2fs_superbloco *find, struct t2fs_record *rec){*/
+    /*[>printf("entrou t2fs_next\n");<]*/
+
+    /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
+
+    /*char block[diskBlockSize];*/
+    /*int i, j;*/
+    /*int blockPos = 0, offsetBlockPos = 0;*/
+    /*int firstValid = 0;*/
+    /*int findNextValid = 0;*/
+
+    /*int posRootBlock = diskCtrlSize + diskFreeBlockSize;*/
+
+    /*// Verifica se já encontrou o primeiro arquivo válido*/
+    /*[>if (find->fileName == NULL){<]*/
+        /*[>[>printf("ENTROU NULL\n");<]<]*/
+        /*[>firstValid = 1;<]*/
+        /*[>blockPos = 0;<]*/
+        /*[>offsetBlockPos = 0;<]*/
+    /*[>}<]*/
+    /*[>else {<]*/
+        /*[>blockPos = find->blockPos;<]*/
+        /*[>offsetBlockPos = find->offsetBlockPos;<]*/
+    /*[>}<]*/
+
+    /*// Percorre o diretório raiz*/
+    /*for (i = blockPos; i < diskRootSize; i++) {*/
+        /*[>read_block(posRootBlock + i, block);<]*/
+        /*read_sector(posRootBlock + i, block);*/
+
+        /*j = offsetBlockPos;*/
+        /*while (j < diskBlockSize) {*/
+            /*[>printf("entrou while i (diskRootSize)i: %d j (diskBlockSize): %d\n",i,j);<]*/
+            /*[>printf("lendo: %s e procurando: %s | firstValid %d\n", block + j, find->fileName, firstValid);<]*/
+            /*// Se for para encontrar o primeiro ou o próximo arquivo válido*/
+            /*if (firstValid || findNextValid){*/
+                /*// Verifica bit na primeira letra do arquivo*/
+                /*if ( ((block + j)[0] & 0x80) == 0x80){*/
+                    /*memcpy(rec, block+j, sizeof(struct t2fs_record));*/
+
+                    /*// Cria record auxiliar para receber o bloco atual*/
+                    /*struct t2fs_record *recAux = malloc(sizeof(struct t2fs_record));*/
+                    /*memcpy(recAux, block+j, sizeof(struct t2fs_record));*/
+
+                    /*// Copia nome do arquivo para estrutura find*/
+                    /*[>find->fileName = malloc(40*sizeof(char));<]*/
+                    /*[>memcpy(find->fileName, recAux->name, 40*sizeof(char));<]*/
+
+                    /*// Acerta ponteiros para que retornem no mesmo ponto*/
+                    /*[>find->blockPos = i;<]*/
+                    /*[>find->offsetBlockPos = j;<]*/
+
+                    /*[>printf("Encontrou %s e retornou %x\n", find->fileName, (unsigned char) find->fileName[0]);<]*/
+                    /*[>printf("i %d j %d\n", find->blockPos, find->offsetBlockPos);<]*/
+
+                    /*return 0;*/
+                /*}*/
+            /*}*/
+            /*// Se for para encontrar o arquivo válido atual*/
+            /*[>else if (strcmp(block + j, find->fileName) == 0){<]*/
+                /*[>printf("FOUND WORD %s\n", find->fileName);<]*/
+                /*[>findNextValid = 1;<]*/
+            /*[>}<]*/
+
+            /*j = j + diskFileEntrySize;*/
+        /*}*/
+    /*}*/
+
+    /*return 1;*/
+/*}*/
 
 int markBitmap(int pos, short int setbit){
     char block[diskBlockSize];
