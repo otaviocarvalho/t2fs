@@ -54,7 +54,7 @@ char *t2fs_identify(void){
         t2fs_first(&superblock);
     }
 
-    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline ()\0", 90);
+    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline (180229)\0", 90);
 
     return str;
 }
