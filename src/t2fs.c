@@ -28,6 +28,7 @@ unsigned long int diskBlocksNumber;
 unsigned long int diskBlockSize;
 struct t2fs_record diskBitMapReg;
 struct t2fs_record diskRootDirReg;
+struct t2fs_superbloco superBlockBuffer;
 
 /*unsigned char diskVersion;*/
 /*unsigned int diskSize;*/ // Era dado em blocos, agora é em bytes (diskSize / blockSize == diskSizeAnterior)
@@ -67,21 +68,48 @@ void initDisk(struct t2fs_superbloco *sblock){
     diskBlocksNumber = (unsigned long int) sblock->NofBlocks;
     diskBlockSize = (unsigned long int) sblock->BlockSize;
     // BitMapReg
-    /*memcpy(diskBitMapReg, sblock->BitMapReg, sizeof(struct t2fs_record));*/
     diskBitMapReg = sblock->BitMapReg;
     // RootDirReg
     diskRootDirReg = sblock->RootDirReg;
 
-    printf("read superblock struct: %c%c%c%c\n", sblock->Id[0], sblock->Id[1], sblock->Id[2], sblock->Id[3]);
-    printf("version: %x\n", diskVersion);
-    printf("SuperBlockSize: %d\n", diskSuperBlockSize);
-    printf("diskSize: %ld\n", diskSize);
-    printf("diskBlocksNumber: %ld\n", diskBlocksNumber);
-    printf("blockSize: %ld\n", diskBlockSize);
-    printf("diskRootDirReg name: %s\n", diskRootDirReg.name);
+    // Teste copia do superbloco para uma variável global
+    memcpy(&superBlockBuffer, sblock, sizeof(struct t2fs_superbloco));
+    /*printf("read superblock copy struct: %c%c%c%c\n", superBlockBuffer.Id[0], superBlockBuffer.Id[1], superBlockBuffer.Id[2], superBlockBuffer.Id[3]);*/
 
-    printf("print bitmap:\n");
-    printf("%b", diskBitMapReg);
+    // Teste leitura dos campos do superbloco
+    /*printf("read superblock struct: %c%c%c%c\n", sblock->Id[0], sblock->Id[1], sblock->Id[2], sblock->Id[3]);*/
+    /*printf("version: %x\n", diskVersion);*/
+    /*printf("SuperBlockSize: %d\n", diskSuperBlockSize);*/
+    /*printf("diskSize: %ld\n", diskSize);*/
+    /*printf("diskBlocksNumber: %ld\n", diskBlocksNumber);*/
+    /*printf("blockSize: %ld\n", diskBlockSize);*/
+    /*printf("diskRootDirReg name: %s\n", diskRootDirReg.name);*/
+
+    // Teste de impressão do t2fs_record do diretório raíz
+    /*printf("\nprint bitmap t2fs_record:\n");*/
+    /*printf("%s\n", diskBitMapReg.name);*/
+    /*printf("blocksFileSize: %ld\n", (unsigned long int) diskBitMapReg.blocksFileSize);*/
+    /*printf("bytesFileSize: %ld\n", (unsigned long int) diskBitMapReg.bytesFileSize);*/
+    /*printf("dataPtr[0]: %x\n", diskBitMapReg.dataPtr[0]);*/
+    /*printf("dataPtr[1]: %x\n", diskBitMapReg.dataPtr[1]);*/
+    /*printf("singleIndPtr: %x\n", diskBitMapReg.singleIndPtr);*/
+    /*printf("doubleIndPtr: %x\n", diskBitMapReg.doubleIndPtr);*/
+
+    // Teste de impressão do bitmap
+    /*printf("print bitmap content:\n");*/
+    /*unsigned char test_char;*/
+    /*int i;*/
+    /*for (i = 0; i < 128; i++) {*/
+        /*memcpy(&test_char, &diskRootDirReg.dataPtr[0]+i, sizeof(unsigned char));*/
+        /*printf("%x\n", test_char);*/
+    /*}*/
+
+    // Teste de leitura do primeiro arquivo do diretório raíz
+    /*struct t2fs_record *test_record = malloc(sizeof(struct t2fs_record)) ;*/
+    /*memcpy(test_record, &diskRootDirReg.dataPtr[0]+sizeof(struct t2fs_record)*0, sizeof(struct t2fs_record));*/
+    /*printf("\nfilename: %s\n", test_record->name);*/
+    /*printf("typeval: %x\n", test_record->TypeVal);*/
+    /*printf("blocksFileSize: %ld\n", (unsigned long int) test_record->blocksFileSize);*/
 
     diskInitialized = 1;
 }
@@ -103,6 +131,42 @@ int t2fs_first(struct t2fs_superbloco *findStruct){
     if(!diskInitialized){
         initDisk(findStruct);
     }
+
+    // Teste de mudança no superbloco, escrita no disco e posterior leitura do superbloco
+    /*printf("valor do primeiro byte do bitmap alterado para %x\n", 4);*/
+    /*superBlockBuffer.RootDirReg.dataPtr[0] = 4;*/
+    /*memcpy(find, &superBlockBuffer, sizeof(struct t2fs_superbloco));*/
+    /*write_sector(0, find);*/
+    /*read_sector(0, find);*/
+    /*memcpy(findStruct, find, sizeof(struct t2fs_superbloco));*/
+    /*printf("read superblock struct: %c%c%c%c\n", findStruct->Id[0], findStruct->Id[1], findStruct->Id[2], findStruct->Id[3]);*/
+    /*printf("valor do primeiro byte do bitmap lido do disco %x\n", findStruct->RootDirReg.dataPtr[0]);*/
+
+    return 0;
+}
+
+int markBlockBitmap(int block){
+    /*char block[diskBlockSize];*/
+    /*int posBlock;*/
+    /*int posBit;*/
+    /*int posByte;*/
+
+    // Encontra posição do bloco no bitmap
+    /*posBlock = diskCtrlSize + (pos / (8 * diskBlockSize));*/
+    /*read_block(posBlock, block);*/
+    /*read_sector(posBlock, block);*/
+
+    // Encontra byte e bit especifico a serem modificados
+    /*posByte = posBlock / 8;*/
+    /*posBit = 7 - (posBlock % 8);*/
+
+    // Faz set ou unset do bit especificado
+    /*if (setbit){*/
+        /*block[posByte] = block[posByte] | (0x1 << posBit);*/
+    /*}*/
+    /*else {*/
+        /*block[posByte] = block[posByte] & (0xFE << posBit);*/
+    /*}*/
 
     return 0;
 }
