@@ -47,6 +47,7 @@ int countFiles = 0;
 
 int t2fs_first(struct t2fs_superbloco *findStruct);
 
+// função para identificar os componentes do grupo responsável pelo desenvolvimento deste trabalho 
 char *t2fs_identify(void){
     char *str = malloc(sizeof(char) * 90);
 
@@ -55,11 +56,12 @@ char *t2fs_identify(void){
         t2fs_first(&superblock);
     }
 
-    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline (180229)\0", 90);
+    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline (180229)r\0", 90);
 
     return str;
 }
 
+// função para inicializar o super block
 void initDisk(struct t2fs_superbloco *sblock){
 
     diskVersion = (unsigned short) sblock->Version;
@@ -348,6 +350,7 @@ t2fs_file t2fs_create (char *name){
     // Monta arquivo a ser salvo no disco
     file* newFile = malloc(sizeof(file));
     memcpy(newFile->record.name, validatedName, MAX_FILE_NAME);
+    newFile->record.typeVal = 0x01; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
     newFile->record.name[39] = 0;
     newFile->record.blocksFileSize = 0;
     newFile->record.bytesFileSize = 0;
