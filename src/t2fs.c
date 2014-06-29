@@ -80,11 +80,11 @@ void markBlockBitmap(int block, int setbit){
     // Encontra byte e bit especifico a serem modificados
     posByte = block / 8; // Encontra o byte no qual escrever (8 blocos representados por byte)
     posBit = block % 8; // Encontra em qual bit do byte escrever (representação da direita para a esquerda, do 0 ao 7, bit 7 ativo == 0x80)
-    printf("posByte %x\n", posByte);
-    printf("posBit %x\n", posBit);
+    /*printf("posByte %x\n", posByte);*/
+    /*printf("posBit %x\n", posBit);*/
 
-    memcpy(&block_copy, &bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
-    printf("blockCopy %x\n", block_copy);
+    memcpy(&block_copy, bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
+    /*printf("blockCopy %x\n", block_copy);*/
     // Faz set ou unset do bit especificado
     if (setbit){
         block_copy = block_copy | (0x1 << posBit);
@@ -92,12 +92,12 @@ void markBlockBitmap(int block, int setbit){
     else {
         block_copy = block_copy & (0xFE << posBit);
     }
-    printf("blockCopy after set/unset %x\n", block_copy);
+    /*printf("blockCopy after set/unset %x\n", block_copy);*/
 
     // Salva o valor no bitmap
-    memcpy(&bitmapBuffer+(posByte*sizeof(unsigned char)), &block_copy, sizeof(unsigned char));
-    memcpy(&block_copy, &bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
-    printf("novo valor no bitmap %x\n", block_copy);
+    memcpy(bitmapBuffer+(posByte*sizeof(unsigned char)), &block_copy, sizeof(unsigned char));
+    memcpy(&block_copy, bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
+    /*printf("novo valor no bitmap %x\n", block_copy);*/
 
     // Persiste o bitmap alterado no disco
     write_sector(1, bitmapBuffer);
@@ -168,12 +168,12 @@ void initDisk(struct t2fs_superbloco *sblock){
     /*printf("block to sector map: %d block to %d sector\n", diskBitMapReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]));*/
 
     // Teste de leitura do bitmap
-    int i;
-    for (i = 0; i < diskBitMapReg.bytesFileSize/8; i++) {
-        printf("%x\n", bitmapBuffer[i]);
-    }
+    /*int i;*/
+    /*for (i = 0; i < diskBitMapReg.bytesFileSize/8; i++) {*/
+        /*printf("%x\n", bitmapBuffer[i]);*/
+    /*}*/
     // Teste de mudança no bitmap
-    markBlockBitmap(8,SET_BIT);
+    /*markBlockBitmap(126,SET_BIT);*/
 
     // Teste de mudança no superbloco, escrita no disco e posterior leitura do superbloco
     /*unsigned char *find = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'*/
