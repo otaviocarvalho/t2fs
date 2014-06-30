@@ -397,7 +397,7 @@ t2fs_file t2fs_create (char *name){
     // Monta arquivo a ser salvo no disco
     file* newFile = malloc(sizeof(file));
     memcpy(newFile->record.name, validatedName, MAX_FILE_NAME);
-    newFile->record.typeVal = 0x01; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
+    newFile->record.TypeVal = 0x01; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
     newFile->record.name[39] = 0;
     newFile->record.blocksFileSize = 0;
     newFile->record.bytesFileSize = 0;
