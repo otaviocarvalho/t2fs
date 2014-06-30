@@ -60,7 +60,6 @@ int convertBlockToSector(int block_size, int block_number){
 
 int t2fs_first(struct t2fs_superbloco *findStruct);
 
-// função para identificar os componentes do grupo responsável pelo desenvolvimento deste trabalho 
 char *t2fs_identify(void){
     char *str = malloc(sizeof(char) * 90);
 
@@ -69,13 +68,10 @@ char *t2fs_identify(void){
         t2fs_first(&superblock);
     }
 
-    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline (180229)r\0", 90);
+    str = memcpy(str, "Otavio (180470) - Lisandro (143764) - Tagline ()\0", 90);
 
     return str;
 }
-
-// função para inicializar o super block
-void initDisk(struct t2fs_superbloco *sblock){
 
 void markBlockBitmap(int block, int setbit){
     int posByte, posBit;
@@ -315,80 +311,6 @@ int t2fs_next(struct t2fs_superbloco *find, struct t2fs_record *rec){
     return 1;
 }
 
-/*int t2fs_next(struct t2fs_superbloco *find, struct t2fs_record *rec){*/
-    /*[>printf("entrou t2fs_next\n");<]*/
-
-    /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
-
-    /*char block[diskBlockSize];*/
-    /*int i, j;*/
-    /*int blockPos = 0, offsetBlockPos = 0;*/
-    /*int firstValid = 0;*/
-    /*int findNextValid = 0;*/
-
-    /*int posRootBlock = diskCtrlSize + diskFreeBlockSize;*/
-
-    /*// Verifica se já encontrou o primeiro arquivo válido*/
-    /*[>if (find->fileName == NULL){<]*/
-        /*[>[>printf("ENTROU NULL\n");<]<]*/
-        /*[>firstValid = 1;<]*/
-        /*[>blockPos = 0;<]*/
-        /*[>offsetBlockPos = 0;<]*/
-    /*[>}<]*/
-    /*[>else {<]*/
-        /*[>blockPos = find->blockPos;<]*/
-        /*[>offsetBlockPos = find->offsetBlockPos;<]*/
-    /*[>}<]*/
-
-    /*// Percorre o diretório raiz*/
-    /*for (i = blockPos; i < diskRootSize; i++) {*/
-        /*[>read_block(posRootBlock + i, block);<]*/
-        /*read_sector(posRootBlock + i, block);*/
-
-        /*j = offsetBlockPos;*/
-        /*while (j < diskBlockSize) {*/
-            /*[>printf("entrou while i (diskRootSize)i: %d j (diskBlockSize): %d\n",i,j);<]*/
-            /*[>printf("lendo: %s e procurando: %s | firstValid %d\n", block + j, find->fileName, firstValid);<]*/
-            /*// Se for para encontrar o primeiro ou o próximo arquivo válido*/
-            /*if (firstValid || findNextValid){*/
-                /*// Verifica bit na primeira letra do arquivo*/
-                /*if ( ((block + j)[0] & 0x80) == 0x80){*/
-                    /*memcpy(rec, block+j, sizeof(struct t2fs_record));*/
-
-                    /*// Cria record auxiliar para receber o bloco atual*/
-                    /*struct t2fs_record *recAux = malloc(sizeof(struct t2fs_record));*/
-                    /*memcpy(recAux, block+j, sizeof(struct t2fs_record));*/
-
-                    /*// Copia nome do arquivo para estrutura find*/
-                    /*[>find->fileName = malloc(40*sizeof(char));<]*/
-                    /*[>memcpy(find->fileName, recAux->name, 40*sizeof(char));<]*/
-
-                    /*// Acerta ponteiros para que retornem no mesmo ponto*/
-                    /*[>find->blockPos = i;<]*/
-                    /*[>find->offsetBlockPos = j;<]*/
-
-                    /*[>printf("Encontrou %s e retornou %x\n", find->fileName, (unsigned char) find->fileName[0]);<]*/
-                    /*[>printf("i %d j %d\n", find->blockPos, find->offsetBlockPos);<]*/
-
-                    /*return 0;*/
-                /*}*/
-            /*}*/
-            /*// Se for para encontrar o arquivo válido atual*/
-            /*[>else if (strcmp(block + j, find->fileName) == 0){<]*/
-                /*[>printf("FOUND WORD %s\n", find->fileName);<]*/
-                /*[>findNextValid = 1;<]*/
-            /*[>}<]*/
-
-            /*j = j + diskFileEntrySize;*/
-        /*}*/
-    /*}*/
-
-    /*return 1;*/
-/*}*/
-
 int markBitmap(int pos, short int setbit){
     char block[diskBlockSize];
     int posBlock;
@@ -474,7 +396,6 @@ t2fs_file t2fs_create (char *name){
     // Monta arquivo a ser salvo no disco
     file* newFile = malloc(sizeof(file));
     memcpy(newFile->record.name, validatedName, MAX_FILE_NAME);
-    newFile->record.typeVal = 0x01; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
     newFile->record.name[39] = 0;
     newFile->record.blocksFileSize = 0;
     newFile->record.bytesFileSize = 0;
