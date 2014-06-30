@@ -192,11 +192,12 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Teste de varredura dos arquivos/pastas de um diretório
     char *find_folder = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'
     printf("%d -> %d\n", diskRootDirReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]));
-    read_sector(convertBlockToSector(diskBlockSize, 8), find_folder);
+    /*read_sector(convertBlockToSector(diskBlockSize, 8), find_folder);*/
+    read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);
     int k=0;
     struct t2fs_record *read_rec = malloc(sizeof(struct t2fs_record));
     while(k < SIZE_SECTOR_BYTES){
-        memcpy(read_rec, find+k, sizeof(struct t2fs_record));
+        memcpy(read_rec, find_folder+k, sizeof(struct t2fs_record));
         printf("%s\n", read_rec->name);
         printf("tipo: %x\n", read_rec->TypeVal);
         printf("bloco direto[0]: %x\n", read_rec->dataPtr[0]);
@@ -207,7 +208,7 @@ void initDisk(struct t2fs_superbloco *sblock){
         k += sizeof(struct t2fs_record);
     }
     free(read_rec);
-    free(find);
+    free(find_folder);
 
     // Ativa a flag de conclusão da inicialização do disco
     diskInitialized = 1;
@@ -231,12 +232,12 @@ int t2fs_first(struct t2fs_superbloco *findStruct){
         initDisk(findStruct);
     }
 
-
     free(find);
 
     return 0;
 }
 
+// Versão anterior - fazer replace
 char *validateFilename(char *name){
     char* validatedName = malloc(sizeof(char)*MAX_FILE_NAME);
     int i = 0, j = 0;
@@ -255,6 +256,7 @@ char *validateFilename(char *name){
     return validatedName;
 }
 
+// Versão anterior - fazer replace
 int markBitmap(int pos, short int setbit){
     char block[diskBlockSize];
     int posBlock;
@@ -435,14 +437,71 @@ int t2fs_close(t2fs_file handle){
     return -1;
 }
 
-file *findFile(t2fs_file handle){
-    int i;
-    for(i = 0; i < countFiles; i++){
-        if(files[i]->handle == handle){
-            return files[i];
+/*file *findFile(t2fs_file handle){*/
+    /*int i;*/
+    /*for(i = 0; i < countFiles; i++){*/
+        /*if(files[i]->handle == handle){*/
+            /*return files[i];*/
+        /*}*/
+    /*}*/
+
+    /*return NULL;*/
+/*}*/
+
+struct t2fs_record *findFile(char *name){
+    char *token, *string, *tofree;
+    struct t2fs_record *file = malloc(sizeof(struct t2fs_record));
+    char *find_folder = malloc(SIZE_SECTOR_BYTES);
+    int found, count_bytes;
+
+    tofree = string = strdup(name);
+    if (string != NULL){
+        // Testa leitura do primeiro arquivo do diretório raiz "/"
+        if (strcmp(&string[0],"/")){
+            read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);
+            memcpy(file, find_folder, sizeof(struct t2fs_record));
+            string++;
         }
+        else {
+            return NULL;
+        }
+
+        // Testa a leitura dos subdiretórios ou arquivos
+        while((token = strsep(&string, "/")) != NULL){
+            printf("%s\n", token);
+
+            // Procura pelo nome no primeiro setor
+            found = 0;
+            count_bytes = 0;
+            while (count_bytes < SIZE_SECTOR_BYTES && !found){
+                memcpy(file, find_folder+count_bytes, sizeof(struct t2fs_record));
+                printf("percorreu %s\n", file->name);
+                // Testa se encontrou o pedaço do caminho
+                if (strcmp(token,file->name) == 0){
+                    printf("encontrou %s\n", token);
+                    found = 1;
+                }
+                count_bytes += sizeof(struct t2fs_record);
+            }
+            if (strcmp(token," ") == 0)
+                printf("here1\n");
+
+            // Lê subdiretório se for uma pasta
+            if (file->TypeVal == TYPEVAL_DIRETORIO){
+                read_sector(convertBlockToSector(diskBlockSize, file->dataPtr[0]), find_folder);
+                memcpy(file, find_folder, sizeof(struct t2fs_record));
+            }
+        }
+
+        // Retorna arquivo se encontrou o caminho completo
+        if (found)
+            return file;
+
+        free(tofree);
     }
 
+    free(find_folder);
+    free(file);
     return NULL;
 }
 
@@ -452,62 +511,54 @@ int t2fs_delete(char *name){
         t2fs_first(&superblock);
     }
 
-    file *deleteFile;
-    int numBlocks;
-    char block[diskBlockSize];
-    int i;
-
-    // Abre o arquivo a ser deletado
-    int handle = t2fs_open(name);
+    // Busca o arquivo a ser deletado
+    /*int handle = t2fs_open(name);*/
+    struct t2fs_record *del_rec = findFile(name);
 
     // Testa se encontrou o arquivo
-    if (handle >= 0){
-        // Encontra o arquivo dentre os abertos
-        deleteFile = findFile(handle);
-        /*printf("filename check %c\n", deleteFile->record.name[0] & 0x7f);*/
+    if (del_rec != NULL){
+        // Fecha o arquivo se ele se encontra entre os abertos
+        /*deleteFile = findFile(handle);*/
 
         // Descobre o número de blocos a serem deletados
-        numBlocks = deleteFile->record.blocksFileSize;
+        /*numBlocks = deleteFile->record.blocksFileSize;*/
 
         // Deleta blocos apontados por ponteiros diretos
-        for (i = 0; i < 2; i++) {
-            if (numBlocks > 0){
-                markBitmap(deleteFile->record.dataPtr[i],0);
-                numBlocks--;
-            }
-            else {
-                break;
-            }
-        }
+        /*for (i = 0; i < 2; i++) {*/
+            /*if (numBlocks > 0){*/
+                /*markBitmap(deleteFile->record.dataPtr[i],0);*/
+                /*numBlocks--;*/
+            /*}*/
+            /*else {*/
+                /*break;*/
+            /*}*/
+        /*}*/
 
         // Deleta blocos apontados por ponteiros de indireção simples
-        if (numBlocks > 0){
-            markBitmap(deleteFile->record.singleIndPtr, 0);
+        /*if (numBlocks > 0){*/
+            /*markBitmap(deleteFile->record.singleIndPtr, 0);*/
             /*read_block(deleteFile->record.singleIndPtr, block);*/
-            read_sector(deleteFile->record.singleIndPtr, block);
+            /*read_sector(deleteFile->record.singleIndPtr, block);*/
 
-            for (i = 0; i < diskBlockSize; i++) {
-                if (numBlocks > 0){
-                    markBitmap(block[i], 0);
-                    numBlocks--;
-                }
-                else {
-                    break;
-                }
-            }
-        }
+            /*for (i = 0; i < diskBlockSize; i++) {*/
+                /*if (numBlocks > 0){*/
+                    /*markBitmap(block[i], 0);*/
+                    /*numBlocks--;*/
+                /*}*/
+                /*else {*/
+                    /*break;*/
+                /*}*/
+            /*}*/
+        /*}*/
 
         // Deleta blocos apontados por ponteiros de indireção dupla
 
         // Invalida registro pelo bit no nome
         /*read_block(deleteFile->pos, block);*/
-        read_sector(deleteFile->pos, block);
-        block[deleteFile->blockPos] = block[deleteFile->blockPos] & 0x7F;
+        /*read_sector(deleteFile->pos, block);*/
+        /*block[deleteFile->blockPos] = block[deleteFile->blockPos] & 0x7F;*/
         /*write_block(deleteFile->pos, block);*/
-        write_sector(deleteFile->pos, block);
-
-        // Fecha arquivo
-        t2fs_close(handle);
+        /*write_sector(deleteFile->pos, block);*/
 
         return 0;
     }
@@ -516,29 +567,99 @@ int t2fs_delete(char *name){
     }
 }
 
-int t2fs_seek(t2fs_file handle, unsigned int offset){
-    // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+/*int t2fs_delete(char *name){*/
+    /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
-    file *file = findFile(handle);
+    /*file *deleteFile;*/
+    /*int numBlocks;*/
+    /*char block[diskBlockSize];*/
+    /*int i;*/
 
-    if (file != NULL){
-        if (offset < file->record.bytesFileSize){
-            file->currentPos = offset;
-            return 0;
-        }
-        else {
-            printf("Error: Offset greater than the size of the file\n");
-        }
-    }
-    else {
-        printf("Error: File not found!\n");
-    }
+    /*// Abre o arquivo a ser deletado*/
+    /*int handle = t2fs_open(name);*/
 
-    return -1;
-}
+    /*// Testa se encontrou o arquivo*/
+    /*if (handle >= 0){*/
+        /*// Encontra o arquivo dentre os abertos*/
+        /*deleteFile = findFile(handle);*/
+        /*[>printf("filename check %c\n", deleteFile->record.name[0] & 0x7f);<]*/
+
+        /*// Descobre o número de blocos a serem deletados*/
+        /*numBlocks = deleteFile->record.blocksFileSize;*/
+
+        /*// Deleta blocos apontados por ponteiros diretos*/
+        /*for (i = 0; i < 2; i++) {*/
+            /*if (numBlocks > 0){*/
+                /*markBitmap(deleteFile->record.dataPtr[i],0);*/
+                /*numBlocks--;*/
+            /*}*/
+            /*else {*/
+                /*break;*/
+            /*}*/
+        /*}*/
+
+        /*// Deleta blocos apontados por ponteiros de indireção simples*/
+        /*if (numBlocks > 0){*/
+            /*markBitmap(deleteFile->record.singleIndPtr, 0);*/
+            /*[>read_block(deleteFile->record.singleIndPtr, block);<]*/
+            /*read_sector(deleteFile->record.singleIndPtr, block);*/
+
+            /*for (i = 0; i < diskBlockSize; i++) {*/
+                /*if (numBlocks > 0){*/
+                    /*markBitmap(block[i], 0);*/
+                    /*numBlocks--;*/
+                /*}*/
+                /*else {*/
+                    /*break;*/
+                /*}*/
+            /*}*/
+        /*}*/
+
+        /*// Deleta blocos apontados por ponteiros de indireção dupla*/
+
+        /*// Invalida registro pelo bit no nome*/
+        /*[>read_block(deleteFile->pos, block);<]*/
+        /*read_sector(deleteFile->pos, block);*/
+        /*block[deleteFile->blockPos] = block[deleteFile->blockPos] & 0x7F;*/
+        /*[>write_block(deleteFile->pos, block);<]*/
+        /*write_sector(deleteFile->pos, block);*/
+
+        /*// Fecha arquivo*/
+        /*t2fs_close(handle);*/
+
+        /*return 0;*/
+    /*}*/
+    /*else {*/
+        /*return -1;*/
+    /*}*/
+/*}*/
+
+/*int t2fs_seek(t2fs_file handle, unsigned int offset){*/
+    /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
+
+    /*file *file = findFile(handle);*/
+
+    /*if (file != NULL){*/
+        /*if (offset < file->record.bytesFileSize){*/
+            /*file->currentPos = offset;*/
+            /*return 0;*/
+        /*}*/
+        /*else {*/
+            /*printf("Error: Offset greater than the size of the file\n");*/
+        /*}*/
+    /*}*/
+    /*else {*/
+        /*printf("Error: File not found!\n");*/
+    /*}*/
+
+    /*return -1;*/
+/*}*/
 
 int diskReserveBlock(){
     char block[diskBlockSize];
@@ -570,259 +691,259 @@ int diskReserveBlock(){
     return -1;
 }
 
-int t2fs_write(t2fs_file handle, char *buffer, int size){
-    int origSize;
-    int maxSizePossible;
-    int sizeLeft, spaceLeft, actualSize;
-    int blockAddress, indBlockAddress;
-    int positionPointer;
-    int i;
+/*int t2fs_write(t2fs_file handle, char *buffer, int size){*/
+    /*int origSize;*/
+    /*int maxSizePossible;*/
+    /*int sizeLeft, spaceLeft, actualSize;*/
+    /*int blockAddress, indBlockAddress;*/
+    /*int positionPointer;*/
+    /*int i;*/
 
-    // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+    /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
-    char block[diskBlockSize];
+    /*char block[diskBlockSize];*/
 
-    // Busca arquivo a ser escrito e atualiza os ponteiros
-    file *fileWrite = findFile(handle);
-    origSize = fileWrite->record.bytesFileSize;
+    /*// Busca arquivo a ser escrito e atualiza os ponteiros*/
+    /*file *fileWrite = findFile(handle);*/
+    /*origSize = fileWrite->record.bytesFileSize;*/
 
-    // Controla o máximo possível a ser escrito no arquivo
-    maxSizePossible = 2*diskBlockSize + diskBlockSize*diskBlockSize + diskBlockSize*diskBlockSize*diskBlockSize;
-    if (size + origSize > maxSizePossible){
-        printf("Error: Limit size reached, isn't possible to write at such file length\n");
-        return -1;
-    }
+    /*// Controla o máximo possível a ser escrito no arquivo*/
+    /*maxSizePossible = 2*diskBlockSize + diskBlockSize*diskBlockSize + diskBlockSize*diskBlockSize*diskBlockSize;*/
+    /*if (size + origSize > maxSizePossible){*/
+        /*printf("Error: Limit size reached, isn't possible to write at such file length\n");*/
+        /*return -1;*/
+    /*}*/
 
-    // Controla os tamanhos restantes para escrita no disco
-    sizeLeft = size;
-    spaceLeft = (fileWrite->record.blocksFileSize * diskBlockSize) - fileWrite->record.bytesFileSize;
-    actualSize = fileWrite->record.bytesFileSize;
+    /*// Controla os tamanhos restantes para escrita no disco*/
+    /*sizeLeft = size;*/
+    /*spaceLeft = (fileWrite->record.blocksFileSize * diskBlockSize) - fileWrite->record.bytesFileSize;*/
+    /*actualSize = fileWrite->record.bytesFileSize;*/
 
-    // Escreve enquanto houver espaço
-    while (sizeLeft > 0){
-        // Alocar mais espaço
-        if (spaceLeft == 0){
-            positionPointer = 0;
+    /*// Escreve enquanto houver espaço*/
+    /*while (sizeLeft > 0){*/
+        /*// Alocar mais espaço*/
+        /*if (spaceLeft == 0){*/
+            /*positionPointer = 0;*/
 
-            blockAddress = diskReserveBlock(); // Aloca um novo bloco no disco
-            if (blockAddress < 1){
-                printf("Error: Wasn't possible to allocate a new block\n");
-                return -1;
-            }
+            /*blockAddress = diskReserveBlock(); // Aloca um novo bloco no disco*/
+            /*if (blockAddress < 1){*/
+                /*printf("Error: Wasn't possible to allocate a new block\n");*/
+                /*return -1;*/
+            /*}*/
 
-            // Atualiza novo espaço disponível no disco
-            spaceLeft = diskBlockSize;
-            fileWrite->record.blocksFileSize++;
+            /*// Atualiza novo espaço disponível no disco*/
+            /*spaceLeft = diskBlockSize;*/
+            /*fileWrite->record.blocksFileSize++;*/
 
-            // Ponteiro direto 1
-            if (actualSize == 0){
-                fileWrite->record.dataPtr[0] = blockAddress;
-            }
-            // Ponteiro direto 2
-            else if (actualSize < 2*diskBlockSize){
-                fileWrite->record.dataPtr[1] = blockAddress;
-            }
-            // Aloca ponteiro indireto
-            else if (actualSize == 2*diskBlockSize){
-                indBlockAddress = diskReserveBlock();
-                if (indBlockAddress < 1){
-                    printf("Error: Wasn't possible to allocate a new indirection block");
-                }
+            /*// Ponteiro direto 1*/
+            /*if (actualSize == 0){*/
+                /*fileWrite->record.dataPtr[0] = blockAddress;*/
+            /*}*/
+            /*// Ponteiro direto 2*/
+            /*else if (actualSize < 2*diskBlockSize){*/
+                /*fileWrite->record.dataPtr[1] = blockAddress;*/
+            /*}*/
+            /*// Aloca ponteiro indireto*/
+            /*else if (actualSize == 2*diskBlockSize){*/
+                /*indBlockAddress = diskReserveBlock();*/
+                /*if (indBlockAddress < 1){*/
+                    /*printf("Error: Wasn't possible to allocate a new indirection block");*/
+                /*}*/
 
-                // Inicializa bloco de índice
-                fileWrite->record.singleIndPtr = indBlockAddress;
-                block[0] = diskBlockSize;
-                for (i = 1; i < diskBlockSize; i++){
-                    block[i] = 0;
-                }
+                /*// Inicializa bloco de índice*/
+                /*fileWrite->record.singleIndPtr = indBlockAddress;*/
+                /*block[0] = diskBlockSize;*/
+                /*for (i = 1; i < diskBlockSize; i++){*/
+                    /*block[i] = 0;*/
+                /*}*/
 
-                // Grava bloco de índice no disco
-                /*write_block(indBlockAddress, block);*/
-            }
-            // Utiliza ponteiro indireto
-            else if (actualSize < (diskBlockSize+2)*diskBlockSize){
-                /*read_block(fileWrite->record.singleIndPtr, block);*/
-                block[fileWrite->record.blocksFileSize - 3] = blockAddress;
-                /*write_block(fileWrite->record.singleIndPtr, block);*/
-            }
-            else {
-                printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
-                return -1;
-            }
-        }
-        // Usar o espaço restante
-        else {
-            positionPointer = actualSize % diskBlockSize;
-            /*printf("positionPointer %d\n", positionPointer);*/
+                /*// Grava bloco de índice no disco*/
+                /*[>write_block(indBlockAddress, block);<]*/
+            /*}*/
+            /*// Utiliza ponteiro indireto*/
+            /*else if (actualSize < (diskBlockSize+2)*diskBlockSize){*/
+                /*[>read_block(fileWrite->record.singleIndPtr, block);<]*/
+                /*block[fileWrite->record.blocksFileSize - 3] = blockAddress;*/
+                /*[>write_block(fileWrite->record.singleIndPtr, block);<]*/
+            /*}*/
+            /*else {*/
+                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
+                /*return -1;*/
+            /*}*/
+        /*}*/
+        /*// Usar o espaço restante*/
+        /*else {*/
+            /*positionPointer = actualSize % diskBlockSize;*/
+            /*[>printf("positionPointer %d\n", positionPointer);<]*/
 
-            if (actualSize < diskBlockSize){
-                blockAddress = fileWrite->record.dataPtr[0];
-            }
-            else if (actualSize < 2*diskBlockSize){
-                blockAddress = fileWrite->record.dataPtr[1];
-            }
-            else if (actualSize < (diskBlockSize+2)*diskBlockSize){
-                /*read_block(fileWrite->record.singleIndPtr, block);*/
-                blockAddress = block[fileWrite->record.blocksFileSize - 3];
-            }
-            else {
-                printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
-                return -1;
-            }
+            /*if (actualSize < diskBlockSize){*/
+                /*blockAddress = fileWrite->record.dataPtr[0];*/
+            /*}*/
+            /*else if (actualSize < 2*diskBlockSize){*/
+                /*blockAddress = fileWrite->record.dataPtr[1];*/
+            /*}*/
+            /*else if (actualSize < (diskBlockSize+2)*diskBlockSize){*/
+                /*[>read_block(fileWrite->record.singleIndPtr, block);<]*/
+                /*blockAddress = block[fileWrite->record.blocksFileSize - 3];*/
+            /*}*/
+            /*else {*/
+                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
+                /*return -1;*/
+            /*}*/
 
-            /*printf("actualSize %d, blockAddress %d, diskBlockSize %d\n", actualSize, blockAddress, diskBlockSize);*/
-            // Lê o bloco
-            /*read_block(blockAddress, block);*/
-        }
+            /*[>printf("actualSize %d, blockAddress %d, diskBlockSize %d\n", actualSize, blockAddress, diskBlockSize);<]*/
+            /*// Lê o bloco*/
+            /*[>read_block(blockAddress, block);<]*/
+        /*}*/
 
-        // Preenche o bloco
-        i = 0;
-        while (positionPointer < diskBlockSize && sizeLeft > 0){
-            block[positionPointer] = block[i];
-            i++;
-            positionPointer++;
-            sizeLeft--;
-            spaceLeft--;
-        }
+        /*// Preenche o bloco*/
+        /*i = 0;*/
+        /*while (positionPointer < diskBlockSize && sizeLeft > 0){*/
+            /*block[positionPointer] = block[i];*/
+            /*i++;*/
+            /*positionPointer++;*/
+            /*sizeLeft--;*/
+            /*spaceLeft--;*/
+        /*}*/
 
-        // Escreve no disco
-        /*write_block(blockAddress, block);*/
-        actualSize = origSize + size - sizeLeft;
-    }
+        /*// Escreve no disco*/
+        /*[>write_block(blockAddress, block);<]*/
+        /*actualSize = origSize + size - sizeLeft;*/
+    /*}*/
 
-    // Atualiza arquivo
-    fileWrite->record.bytesFileSize = actualSize;
-    fileWrite->record.blocksFileSize = actualSize / diskBlockSize;
-    if (positionPointer < diskBlockSize){
-        fileWrite->record.blocksFileSize++;
-    }
+    /*// Atualiza arquivo*/
+    /*fileWrite->record.bytesFileSize = actualSize;*/
+    /*fileWrite->record.blocksFileSize = actualSize / diskBlockSize;*/
+    /*if (positionPointer < diskBlockSize){*/
+        /*fileWrite->record.blocksFileSize++;*/
+    /*}*/
 
-    /*read_block(fileWrite->pos, block);*/
-    memcpy(block+fileWrite->blockPos, &(fileWrite->record), FILE_REGISTER);
-    /*write_block(fileWrite->pos, block);*/
+    /*[>read_block(fileWrite->pos, block);<]*/
+    /*memcpy(block+fileWrite->blockPos, &(fileWrite->record), FILE_REGISTER);*/
+    /*[>write_block(fileWrite->pos, block);<]*/
 
-    return size;
-}
+    /*return size;*/
+/*}*/
 
-int t2fs_read(t2fs_file handle, char *buffer, int size){
-    int curPos, blockPos;
-    int blockRead = 0, bytesRead = 0;
-    int blockAddress;
+/*int t2fs_read(t2fs_file handle, char *buffer, int size){*/
+    /*int curPos, blockPos;*/
+    /*int blockRead = 0, bytesRead = 0;*/
+    /*int blockAddress;*/
 
-     // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+     /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
-    char block[diskBlockSize];
+    /*char block[diskBlockSize];*/
 
-    // Inicializa arquivo e variáveis
-    file *fileRead = findFile(handle);
-    curPos = fileRead->currentPos;
+    /*// Inicializa arquivo e variáveis*/
+    /*file *fileRead = findFile(handle);*/
+    /*curPos = fileRead->currentPos;*/
 
-    // Lê o tamanho em caracteres passado por parâmetro
-    while (size > 0){
+    /*// Lê o tamanho em caracteres passado por parâmetro*/
+    /*while (size > 0){*/
 
-        if (!blockRead){
-            blockPos = curPos % diskBlockSize;
+        /*if (!blockRead){*/
+            /*blockPos = curPos % diskBlockSize;*/
 
-            // Ponteiro direto 1
-            if (curPos < diskBlockSize){
-                blockAddress = fileRead->record.dataPtr[0];
-            }
-            // Ponteiro direto 2
-            else if (curPos < 2*diskBlockSize){
-                blockAddress = fileRead->record.dataPtr[1];
-            }
-            // Indireção simples
-            else if (curPos < (diskBlockSize+2)*diskBlockSize){
-                /*read_block(fileRead->record.singleIndPtr, block);*/
-                blockAddress = block[curPos / diskBlockSize - 2];
-            }
-            // Indireção dupla
-            else {
-                printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
-                return -1;
-            }
+            /*// Ponteiro direto 1*/
+            /*if (curPos < diskBlockSize){*/
+                /*blockAddress = fileRead->record.dataPtr[0];*/
+            /*}*/
+            /*// Ponteiro direto 2*/
+            /*else if (curPos < 2*diskBlockSize){*/
+                /*blockAddress = fileRead->record.dataPtr[1];*/
+            /*}*/
+            /*// Indireção simples*/
+            /*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
+                /*[>read_block(fileRead->record.singleIndPtr, block);<]*/
+                /*blockAddress = block[curPos / diskBlockSize - 2];*/
+            /*}*/
+            /*// Indireção dupla*/
+            /*else {*/
+                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
+                /*return -1;*/
+            /*}*/
 
-            /*read_block(blockAddress, block);*/
-            blockRead = 1;
-        }
+            /*[>read_block(blockAddress, block);<]*/
+            /*blockRead = 1;*/
+        /*}*/
 
-        buffer[bytesRead] = block[blockPos-1];
-        bytesRead++;
-        size--;
+        /*buffer[bytesRead] = block[blockPos-1];*/
+        /*bytesRead++;*/
+        /*size--;*/
 
-        curPos++;
-        blockPos++;
-        if (blockPos > diskBlockSize){
-            blockRead = 0;
-        }
-    }
+        /*curPos++;*/
+        /*blockPos++;*/
+        /*if (blockPos > diskBlockSize){*/
+            /*blockRead = 0;*/
+        /*}*/
+    /*}*/
 
-    fileRead->currentPos = curPos;
-    return bytesRead;
-}
+    /*fileRead->currentPos = curPos;*/
+    /*return bytesRead;*/
+/*}*/
 
-int t2fs_read_old(t2fs_file handle, char *buffer, int size){
-    int curPos, blockPos;
-    int blockRead = 0, bytesRead = 0;
-    int blockAddress;
+/*int t2fs_read_old(t2fs_file handle, char *buffer, int size){*/
+    /*int curPos, blockPos;*/
+    /*int blockRead = 0, bytesRead = 0;*/
+    /*int blockAddress;*/
 
-     // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+     /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
-    char block[diskBlockSize];
+    /*char block[diskBlockSize];*/
 
-    // Inicializa arquivo e variáveis
-    file *fileRead = findFile(handle);
-    curPos = fileRead->currentPos;
+    /*// Inicializa arquivo e variáveis*/
+    /*file *fileRead = findFile(handle);*/
+    /*curPos = fileRead->currentPos;*/
 
-    // Lê o tamanho em caracteres passado por parâmetro
-    while (size > 0){
+    /*// Lê o tamanho em caracteres passado por parâmetro*/
+    /*while (size > 0){*/
 
-        if (!blockRead){
-            blockPos = curPos % diskBlockSize;
+        /*if (!blockRead){*/
+            /*blockPos = curPos % diskBlockSize;*/
 
-            // Ponteiro direto 1
-            if (curPos < diskBlockSize){
-                blockAddress = fileRead->record.dataPtr[0];
-            }
-            // Ponteiro direto 2
-            else if (curPos < 2*diskBlockSize){
-                blockAddress = fileRead->record.dataPtr[1];
-            }
-            // Indireção simples
-            else if (curPos < (diskBlockSize+2)*diskBlockSize){
-                /*read_block(fileRead->record.singleIndPtr, block);*/
-                blockAddress = block[curPos / diskBlockSize - 2];
-            }
-            // Indireção dupla
-            else {
-                printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");
-                return -1;
-            }
+            /*// Ponteiro direto 1*/
+            /*if (curPos < diskBlockSize){*/
+                /*blockAddress = fileRead->record.dataPtr[0];*/
+            /*}*/
+            /*// Ponteiro direto 2*/
+            /*else if (curPos < 2*diskBlockSize){*/
+                /*blockAddress = fileRead->record.dataPtr[1];*/
+            /*}*/
+            /*// Indireção simples*/
+            /*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
+                /*[>read_block(fileRead->record.singleIndPtr, block);<]*/
+                /*blockAddress = block[curPos / diskBlockSize - 2];*/
+            /*}*/
+            /*// Indireção dupla*/
+            /*else {*/
+                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
+                /*return -1;*/
+            /*}*/
 
-            /*read_block(blockAddress, block);*/
-            blockRead = 1;
-        }
+            /*[>read_block(blockAddress, block);<]*/
+            /*blockRead = 1;*/
+        /*}*/
 
-        buffer[bytesRead] = block[blockPos-1];
-        bytesRead++;
-        size--;
+        /*buffer[bytesRead] = block[blockPos-1];*/
+        /*bytesRead++;*/
+        /*size--;*/
 
-        curPos++;
-        blockPos++;
-        if (blockPos > diskBlockSize){
-            blockRead = 0;
-        }
-    }
+        /*curPos++;*/
+        /*blockPos++;*/
+        /*if (blockPos > diskBlockSize){*/
+            /*blockRead = 0;*/
+        /*}*/
+    /*}*/
 
-    fileRead->currentPos = curPos;
-    return bytesRead;
-}
+    /*fileRead->currentPos = curPos;*/
+    /*return bytesRead;*/
+/*}*/
