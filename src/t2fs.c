@@ -35,9 +35,8 @@ struct t2fs_record diskRootDirReg;
 
 // Estruturas de buffer a serem persistidas no disco físico
 struct t2fs_superbloco superBlockBuffer;
-unsigned char bitmapBuffer[SIZE_SECTOR_BYTES];
+char bitmapBuffer[SIZE_SECTOR_BYTES];
 /*unsigned char **bitmapBuffer;*/
-struct t2fs_record currentDir;
 
 /*unsigned char diskVersion;*/
 /*unsigned int diskSize;*/ // Era dado em blocos, agora é em bytes (diskSize / blockSize == diskSizeAnterior)
@@ -171,7 +170,7 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Teste de leitura do bitmap
     /*int i;*/
     /*for (i = 0; i < diskBitMapReg.bytesFileSize/8; i++) {*/
-        /*printf("%x\n", bitmapBuffer[i]);*/
+        /*printf("%x\n", (unsigned char) bitmapBuffer[i]);*/
     /*}*/
     // Teste de mudança no bitmap
     /*markBlockBitmap(126,SET_BIT);*/
