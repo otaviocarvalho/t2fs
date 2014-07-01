@@ -437,17 +437,6 @@ int t2fs_close(t2fs_file handle){
     return -1;
 }
 
-/*file *findFile(t2fs_file handle){*/
-    /*int i;*/
-    /*for(i = 0; i < countFiles; i++){*/
-        /*if(files[i]->handle == handle){*/
-            /*return files[i];*/
-        /*}*/
-    /*}*/
-
-    /*return NULL;*/
-/*}*/
-
 struct t2fs_record *findFile(char *name){
     char *token, *string, *tofree;
     struct t2fs_record *file = malloc(sizeof(struct t2fs_record));
@@ -705,29 +694,48 @@ int t2fs_delete(char *name){
     /*}*/
 /*}*/
 
-/*int t2fs_seek(t2fs_file handle, unsigned int offset){*/
-    /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
+//Procura um arquivo pelo handle
+file *findFileHandle(t2fs_file handle){
+    int i;
+    for (i = 0; i < MAX_FILES; i++){
+        if (files[i]->handle == handle){
+            return files[i];
+        }
+    }
+    return NULL;
+}
 
-    /*file *file = findFile(handle);*/
+//Reposiciona o current pointer do arquivo
+int t2fs_seek(t2fs_file handle, unsigned int offset){
+    
+    // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
 
-    /*if (file != NULL){*/
-        /*if (offset < file->record.bytesFileSize){*/
-            /*file->currentPos = offset;*/
-            /*return 0;*/
-        /*}*/
-        /*else {*/
-            /*printf("Error: Offset greater than the size of the file\n");*/
-        /*}*/
-    /*}*/
-    /*else {*/
-        /*printf("Error: File not found!\n");*/
-    /*}*/
+    file *file = findFileHandle(handle);
 
-    /*return -1;*/
-/*}*/
+    if (file != NULL){
+	if(offset == -1) {
+            file->currentPos = file->record.bytesFileSize;
+	    return 0;
+	}
+	else {
+            if (offset < file->record.bytesFileSize){
+            	file->currentPos = offset;
+            	return 0;
+	    }
+            else {
+            	printf("Error: Offset greater than the size of the file\n");
+            }
+	}
+    }
+    else {
+        printf("Error: File not found!\n");
+    }
+
+    return -1;
+}
 
 /*int diskReserveBlock(){*/
     /*char block[diskBlockSize];*/
