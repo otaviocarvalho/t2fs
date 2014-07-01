@@ -698,9 +698,8 @@ int t2fs_delete(char *name){
 file *findFileHandle(t2fs_file handle){
     int i;
     for (i = 0; i < MAX_FILES; i++){
-        if (files[i]->handle == handle){
+        if (files[i]->handle == handle)
             return files[i];
-        }
     }
     return NULL;
 }
@@ -709,10 +708,9 @@ file *findFileHandle(t2fs_file handle){
 int t2fs_seek(t2fs_file handle, unsigned int offset){
     
     // Inicializa o disco
-    if(!diskInitialized){
+    if(!diskInitialized)
         t2fs_first(&superblock);
-    }
-
+    
     file *file = findFileHandle(handle);
 
     if (file != NULL){
@@ -725,15 +723,13 @@ int t2fs_seek(t2fs_file handle, unsigned int offset){
             	file->currentPos = offset;
             	return 0;
 	    }
-            else {
+            else 
             	printf("Error: Offset greater than the size of the file\n");
-            }
 	}
     }
-    else {
+    else 
         printf("Error: File not found!\n");
-    }
-
+    
     return -1;
 }
 
@@ -904,62 +900,61 @@ int t2fs_seek(t2fs_file handle, unsigned int offset){
     /*return size;*/
 /*}*/
 
-/*int t2fs_read(t2fs_file handle, char *buffer, int size){*/
-    /*int curPos, blockPos;*/
-    /*int blockRead = 0, bytesRead = 0;*/
-    /*int blockAddress;*/
 
-     /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
+int t2fs_read(t2fs_file handle, char *buffer, int size){
+    int curPos;
+    int blockPos;
+    int blockRead = 0;
+    int bytesRead = 0;
+    int blockAddress;
 
-    /*char block[diskBlockSize];*/
+     // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
 
-    /*// Inicializa arquivo e variáveis*/
-    /*file *fileRead = findFile(handle);*/
-    /*curPos = fileRead->currentPos;*/
+    char block[diskBlockSize];
 
-    /*// Lê o tamanho em caracteres passado por parâmetro*/
-    /*while (size > 0){*/
+    // Inicializa arquivo e variáveis
+    file *fileRead = findFileHandle(handle);
+    if(fileRead != NULL){
+	curPos = fileRead->currentPos;
+	
+	//Lê o tamanho em caracteres passado por parâmetro
+	while (size > 0){
 
-        /*if (!blockRead){*/
-            /*blockPos = curPos % diskBlockSize;*/
+		if (!blockRead){
+		    blockPos = curPos % diskBlockSize;
 
-            /*// Ponteiro direto 1*/
-            /*if (curPos < diskBlockSize){*/
-                /*blockAddress = fileRead->record.dataPtr[0];*/
-            /*}*/
-            /*// Ponteiro direto 2*/
-            /*else if (curPos < 2*diskBlockSize){*/
-                /*blockAddress = fileRead->record.dataPtr[1];*/
-            /*}*/
-            /*// Indireção simples*/
-            /*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
-                /*[>read_block(fileRead->record.singleIndPtr, block);<]*/
-                /*blockAddress = block[curPos / diskBlockSize - 2];*/
-            /*}*/
-            /*// Indireção dupla*/
-            /*else {*/
-                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
-                /*return -1;*/
-            /*}*/
+		    // Ponteiro direto 1
+		    if (curPos < diskBlockSize)
+		        blockAddress = fileRead->record.dataPtr[0];
+		    
+		    // Ponteiro direto 2
+		    else if (curPos < 2*diskBlockSize)
+		        blockAddress = fileRead->record.dataPtr[1];
 
-            /*[>read_block(blockAddress, block);<]*/
-            /*blockRead = 1;*/
-        /*}*/
+		    // Indireção simples
+		    else if (curPos < (diskBlockSize+2)*diskBlockSize){
+		        blockAddress = block[curPos / diskBlockSize - 2];
+		    
+		    }
+		    blockRead = 1;
+		}
 
-        /*buffer[bytesRead] = block[blockPos-1];*/
-        /*bytesRead++;*/
-        /*size--;*/
+		buffer[bytesRead] = block[blockPos-1];
+		bytesRead++;
+		size--;
 
-        /*curPos++;*/
-        /*blockPos++;*/
-        /*if (blockPos > diskBlockSize){*/
-            /*blockRead = 0;*/
-        /*}*/
-    /*}*/
+		curPos++;
+		blockPos++;
+		if (blockPos > diskBlockSize)
+		    blockRead = 0;
 
-    /*fileRead->currentPos = curPos;*/
-    /*return bytesRead;*/
-/*}*/
+	}
+	fileRead->currentPos = curPos;
+	return bytesRead;
+
+    }
+    return -1;    
+}
