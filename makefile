@@ -9,6 +9,12 @@ FLAGS_TESTES_32 = -L./lib -lt2fs -lapidisk32 -Wall
 FLAGS_TESTES_64 = -L./lib -lt2fs -lapidisk64 -Wall
 TESTE_IDENTIFY = teste/teste_identify
 TESTE_DELETE = teste/teste_delete
+TESTE_CREATE = teste/teste_create
+
+teste_create_run: teste_create_compile
+		./$(TESTE_CREATE)
+teste_create_compile: teste_delete_run
+		gcc $(TESTE_CREATE).c -o $(TESTE_CREATE) $(FLAGS_TESTES_32)
 
 teste_delete_run: teste_delete_compile
 		./$(TESTE_DELETE)
