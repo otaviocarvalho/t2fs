@@ -670,8 +670,7 @@ int t2fs_close(t2fs_file handle){
     return -1;
 }
 
-
-
+//Reposiciona o current pointer do arquivo
 /*int t2fs_seek(t2fs_file handle, unsigned int offset){*/
     /*// Inicializa o disco*/
     /*if(!diskInitialized){*/
@@ -692,7 +691,6 @@ int t2fs_close(t2fs_file handle){
     /*else {*/
         /*printf("Error: File not found!\n");*/
     /*}*/
-
     /*return -1;*/
 /*}*/
 
@@ -864,8 +862,10 @@ int t2fs_close(t2fs_file handle){
 /*}*/
 
 /*int t2fs_read(t2fs_file handle, char *buffer, int size){*/
-    /*int curPos, blockPos;*/
-    /*int blockRead = 0, bytesRead = 0;*/
+    /*int curPos;*/
+    /*int blockPos;*/
+    /*int blockRead = 0;*/
+    /*int bytesRead = 0;*/
     /*int blockAddress;*/
 
      /*// Inicializa o disco*/
@@ -876,49 +876,45 @@ int t2fs_close(t2fs_file handle){
     /*char block[diskBlockSize];*/
 
     /*// Inicializa arquivo e variáveis*/
-    /*file *fileRead = findFile(handle);*/
-    /*curPos = fileRead->currentPos;*/
+    /*file *fileRead = findFileHandle(handle);*/
+    /*if(fileRead != NULL){*/
+	/*curPos = fileRead->currentPos;*/
 
-    /*// Lê o tamanho em caracteres passado por parâmetro*/
-    /*while (size > 0){*/
+	/*//Lê o tamanho em caracteres passado por parâmetro*/
+	/*while (size > 0){*/
 
-        /*if (!blockRead){*/
-            /*blockPos = curPos % diskBlockSize;*/
+		/*if (!blockRead){*/
+			/*blockPos = curPos % diskBlockSize;*/
 
-            /*// Ponteiro direto 1*/
-            /*if (curPos < diskBlockSize){*/
-                /*blockAddress = fileRead->record.dataPtr[0];*/
-            /*}*/
-            /*// Ponteiro direto 2*/
-            /*else if (curPos < 2*diskBlockSize){*/
-                /*blockAddress = fileRead->record.dataPtr[1];*/
-            /*}*/
-            /*// Indireção simples*/
-            /*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
-                /*[>read_block(fileRead->record.singleIndPtr, block);<]*/
-                /*blockAddress = block[curPos / diskBlockSize - 2];*/
-            /*}*/
-            /*// Indireção dupla*/
-            /*else {*/
-                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
-                /*return -1;*/
-            /*}*/
+			/*// Ponteiro direto 1*/
+			/*if (curPos < diskBlockSize)*/
+				/*blockAddress = fileRead->record.dataPtr[0];*/
 
-            /*[>read_block(blockAddress, block);<]*/
-            /*blockRead = 1;*/
-        /*}*/
+			/*// Ponteiro direto 2*/
+			/*else if (curPos < 2*diskBlockSize)*/
+				/*blockAddress = fileRead->record.dataPtr[1];*/
 
-        /*buffer[bytesRead] = block[blockPos-1];*/
-        /*bytesRead++;*/
-        /*size--;*/
+			/*// Indireção simples*/
+			/*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
+				/*blockAddress = block[curPos / diskBlockSize - 2];*/
 
-        /*curPos++;*/
-        /*blockPos++;*/
-        /*if (blockPos > diskBlockSize){*/
-            /*blockRead = 0;*/
-        /*}*/
+			/*}*/
+			/*blockRead = 1;*/
+		/*}*/
+
+		/*buffer[bytesRead] = block[blockPos-1];*/
+		/*bytesRead++;*/
+		/*size--;*/
+
+		/*curPos++;*/
+		/*blockPos++;*/
+		/*if (blockPos > diskBlockSize)*/
+			/*blockRead = 0;*/
+
+	/*}*/
+	/*fileRead->currentPos = curPos;*/
+	/*return bytesRead;*/
+
     /*}*/
-
-    /*fileRead->currentPos = curPos;*/
-    /*return bytesRead;*/
+    /*return -1;*/
 /*}*/
