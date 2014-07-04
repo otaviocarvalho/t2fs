@@ -733,6 +733,33 @@ t2fs_file t2fs_create(char *name){
     return newFile->handle;
 }
 
+//Reposiciona o current pointer do arquivo
+int t2fs_seek(t2fs_file handle, unsigned int offset){
+    struct file *file_aux;
+    file_aux = openFiles;
+
+    // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
+
+    // Percorre os arquivos abertos
+    while (file_aux != NULL){
+        // Encontrou o handle
+        if (file_aux->handle == handle){
+            // Offset para ponteiro direto
+            if (file_aux->currentBytesPos + offset < diskBlockSize){
+                file_aux->currentBytesPos += offset;
+            }
+            // Offset para ponteiro indireto
+            return 1;
+        }
+        file_aux = file_aux->next;
+    }
+
+    return -1;
+}
+
 /*t2fs_file t2fs_open(char *name){*/
     /*// Inicializa o disco*/
     /*if(!diskInitialized){*/
@@ -807,30 +834,6 @@ t2fs_file t2fs_create(char *name){
         /*}*/
     /*}*/
 
-    /*return -1;*/
-/*}*/
-
-//Reposiciona o current pointer do arquivo
-/*int t2fs_seek(t2fs_file handle, unsigned int offset){*/
-    /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
-
-    /*file *file = findFile(handle);*/
-
-    /*if (file != NULL){*/
-        /*if (offset < file->record.bytesFileSize){*/
-            /*file->currentPos = offset;*/
-            /*return 0;*/
-        /*}*/
-        /*else {*/
-            /*printf("Error: Offset greater than the size of the file\n");*/
-        /*}*/
-    /*}*/
-    /*else {*/
-        /*printf("Error: File not found!\n");*/
-    /*}*/
     /*return -1;*/
 /*}*/
 
