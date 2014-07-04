@@ -15,15 +15,14 @@
 #define SET_BIT 1
 #define UNSET_BIT 0
 
-typedef struct {
+struct file {
     t2fs_file handle;
-    unsigned int currentPos;
-    unsigned int pos;
-    unsigned int blockPos;
+    unsigned int currentBytesPos;
+    unsigned int currentBlockPos;
     struct t2fs_record record;
     struct file *next;
     struct file *prev;
-} file;
+};
 
 // Estruturas com equivalência
 unsigned long int diskInitialized = 0;
@@ -52,7 +51,9 @@ unsigned short diskFileEntrySize; // Era o tamanho de um registro no diretório.
 
 struct t2fs_superbloco superblock;
 
-file *files[20];
+struct file *openFiles;
+int openFilesMap[20] = {0};
+int countOpenFiles = 0;
 int countFiles = 0;
 
 // Função auxiliar que converte o valor de um bloco para o seu equivalente em trilhas físicas do disco
@@ -106,11 +107,16 @@ void markBlockBitmap(int block, int setbit){
     // Escolha do bloco onde escrever o bitmap
     int blocoWriteBitMap = diskBitMapReg.dataPtr[0];
     // Persiste o bitmap alterado no disco
-    write_sector(blocoWriteBitMap, bitmapBuffer);
+    /*printf("bitmap block %d bitmap sector %d\n", blocoWriteBitMap, convertBlockToSector(diskBlockSize, blocoWriteBitMap));*/
+    write_sector(convertBlockToSector(diskBlockSize, blocoWriteBitMap), bitmapBuffer);
 }
 
 // Função que inicializa as variáveis necessárias para a correta execução do sistema de arquivos
 void initDisk(struct t2fs_superbloco *sblock){
+    // Inicializa o cache de arquivos abertos
+    openFiles = NULL;
+    countOpenFiles = 0;
+
     // Inicialização das variáveis globais do disco
     diskVersion = (unsigned short) sblock->Version;
     diskSuperBlockSize = (unsigned short) sblock->SuperBlockSize; // diskSize, tamanho do superbloco em blocos/setores
@@ -174,7 +180,6 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Teste de mapeamento do bloco lógico para setor do disco físico
     /*printf("block to sector map: %d block to %d sector\n", diskBitMapReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]));*/
 
-    /*markBlockBitmap(convertBlockToSector(diskBlockSize,8),SET_BIT);*/
     // Teste de leitura do bitmap
     int i;
     for (i = 0; i < diskBitMapReg.bytesFileSize/8; i++) {
@@ -217,6 +222,43 @@ void initDisk(struct t2fs_superbloco *sblock){
     }
     free(read_rec);
     free(find_folder);
+
+    // Teste fileGetHandle/fileDeleteHandle
+    /*struct file *file_aux[4];*/
+    /*file_aux[0] = malloc(sizeof(struct file));*/
+    /*memcpy(file_aux[0]->record.name, "test\0", sizeof(char)*MAX_FILE_NAME);*/
+    /*file_aux[1] = malloc(sizeof(struct file));*/
+    /*memcpy(file_aux[1]->record.name, "test1\0", sizeof(char)*MAX_FILE_NAME);*/
+    /*file_aux[2] = malloc(sizeof(struct file));*/
+    /*memcpy(file_aux[2]->record.name, "test2\0", sizeof(char)*MAX_FILE_NAME);*/
+    /*file_aux[3] = malloc(sizeof(struct file));*/
+    /*memcpy(file_aux[3]->record.name, "test3\0", sizeof(char)*MAX_FILE_NAME);*/
+
+    /*for (i = 0; i < 4; i++) {*/
+        /*int handle_print = fileGetHandle(file_aux[i]);*/
+        /*printf("handle created: %d\n", handle_print);*/
+        /*printf("countOpenFiles %d\n", countOpenFiles);*/
+
+        /*if (i == 3){*/
+            /*int result_delete = fileDeleteHandle(2); // meio*/
+
+            /*struct file *file_aux_insert = malloc(sizeof(struct file));*/
+            /*memcpy(file_aux_insert->record.name, "testmiddle\0", sizeof(char)*MAX_FILE_NAME);*/
+            /*int handle_middle = fileGetHandle(file_aux_insert);*/
+            /*printf("handle insert middle: %d\n", handle_middle); // insere após remover 1*/
+
+            /*int result_delete_1 = fileDeleteHandle(2); // fim*/
+            /*int result_delete_2 = fileDeleteHandle(0); // inicio*/
+            /*int result_delete_3 = fileDeleteHandle(1);*/
+            /*int result_delete_5 = fileDeleteHandle(3); // unico*/
+            /*int result_delete_4 = fileDeleteHandle(3); // lista vazia*/
+        /*}*/
+    /*}*/
+    /*struct file *trav = openFiles;*/
+    /*while (trav != NULL){*/
+        /*printf("%d\n", trav->handle);*/
+        /*trav = trav->next;*/
+    /*}*/
 
     // Ativa a flag de conclusão da inicialização do disco
     diskInitialized = 1;
@@ -529,21 +571,21 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
             memcpy(find_folder_sector+find_record_displacement, new_record, sizeof(struct t2fs_record));
             write_sector(currentSector, find_folder_sector);
 
-                // Teste leitura
-                printf("Leitura\n");
-                read_sector(currentSector, find_folder_sector);
-                memcpy(free_record, find_folder_sector, sizeof(struct t2fs_record));
-                int i = 0;
-                while(i < SIZE_SECTOR_BYTES){
-                    printf("%s %d\n", free_record->name, i);
+                    /*// Teste leitura*/
+                    /*printf("Leitura\n");*/
+                    /*read_sector(currentSector, find_folder_sector);*/
+                    /*memcpy(free_record, find_folder_sector, sizeof(struct t2fs_record));*/
+                    /*int i = 0;*/
+                    /*while(i < SIZE_SECTOR_BYTES){*/
+                        /*printf("%s %d\n", free_record->name, i);*/
 
-                    // Lê a próxima entrada da pasta
-                    i += sizeof(struct t2fs_record);
-                    memcpy(free_record, find_folder_sector+i, sizeof(struct t2fs_record));
-                }
+                        /*// Lê a próxima entrada da pasta*/
+                        /*i += sizeof(struct t2fs_record);*/
+                        /*memcpy(free_record, find_folder_sector+i, sizeof(struct t2fs_record));*/
+                    /*}*/
 
             // Atualiza o bitmap
-            /*markBlockBitmap(currentBlock, SET_BIT);*/
+            markBlockBitmap(currentBlock, SET_BIT);
         }
     }
 
@@ -551,6 +593,102 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
     free(find_record);
     free(free_record);
     return 1;
+}
+
+// Retorna o próximo indicador livre da lista mapa de arquivos abertos vazios
+int fileFindNewHandle(){
+    int i;
+
+    // Percorre o array mapa dos handles e retorna o primeiro valor vazio
+    for (i = 0; i < 20; i++) {
+        if (openFilesMap[i] == 0){
+            openFilesMap[i] = 1;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+// Deleta um file da lista de arquivos abertos
+t2fs_file fileDeleteHandle(int handle_delete){
+    struct file *file_aux;
+
+    file_aux = openFiles;
+    while (file_aux != NULL){
+        // Deleta arquivo ao encontrar
+        if (file_aux->handle == handle_delete){
+            // Desmarca do Mapa
+            openFilesMap[handle_delete] = 0;
+
+            // Deleta o primeiro
+            if (file_aux->prev == NULL){
+                openFiles = NULL;
+            }
+            // Deleta no fim da lista
+            else if (file_aux->next == NULL){
+                file_aux->prev->next = NULL;
+            }
+            // Deleta no meio da lista
+            else {
+                file_aux->prev->next = file_aux->next;
+                file_aux->next->prev = file_aux->prev;
+            }
+
+            // Decrementa contador de arquivos abertos
+            countOpenFiles--;
+
+            // Libera o ponteiro e retorna sucesso
+            free(file_aux);
+            return 1;
+        }
+
+        // Percorre até encontrar o último da lista
+        file_aux = file_aux->next;
+    }
+
+    return -1;
+}
+
+// Cria um novo file na lista de arquivos abertos
+t2fs_file fileGetHandle(struct file *new){
+    struct file *file_aux;
+
+    file_aux = openFiles;
+
+    int found_last = 0;
+    while (file_aux != NULL && !found_last){
+        // Retorna o handle se encontrou arquivo a ser adicionado já abertos
+        if (strcmp(file_aux->record.name, new->record.name) == 0){
+            return file_aux->handle;
+        }
+
+        // Percorre até encontrar o último da lista
+        if (file_aux->next == NULL){
+            found_last = 1;
+        }
+        else {
+            file_aux = file_aux->next;
+        }
+    }
+
+    // Insere novo arquivo aberto no fim da lista
+    if (file_aux == NULL)
+        openFiles = file_aux = new;
+    else
+        file_aux->next = new;
+
+    // Preenche campos do novo arquivo aberto
+    new->handle = fileFindNewHandle();
+    new->currentBytesPos = 0;
+    new->currentBlockPos = 0;
+    new->next = NULL;
+    new->prev = file_aux;
+
+    // Incrementa contador de arquivos abertos
+    countOpenFiles++;
+
+    return new->handle;
 }
 
 // Função que cria um novo arquivo do sistema de arquivos no disco físico
@@ -563,15 +701,15 @@ t2fs_file t2fs_create(char *name){
     }
 
     /*// Verifica se um arquivo pode ser criado*/
-    /*if (countFiles > MAX_FILES-1){*/
-        /*printf("ERROR: Max files limit reached!");*/
-    /*}*/
+    if (countFiles > MAX_FILES-1){
+        return -1;
+    }
 
     // Valida se a estrutura de pastas para a criação do arquivo já existe
     validatedName = validateFileName(name);
 
     // Monta arquivo a ser salvo no disco
-    file* newFile = malloc(sizeof(file));
+    struct file* newFile = malloc(sizeof(struct file));
     memcpy(newFile->record.name, validatedName, sizeof(char)*MAX_FILE_NAME);
     newFile->record.TypeVal = 0x01; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
     newFile->record.blocksFileSize = 0;
@@ -581,16 +719,18 @@ t2fs_file t2fs_create(char *name){
     newFile->record.singleIndPtr = 0xFFFFFFFF;
     newFile->record.doubleIndPtr = 0xFFFFFFFF;
 
-    // Salva arquivo no disco e atualiza apontadores
-    printf("%s\n", name);
-    diskInsertRecord(&newFile->record, validateFolderName(name));
+    // Testa se o arquivo a ser criado poderá receber um handle
+    newFile->handle = fileGetHandle(newFile);
+    if (newFile->handle >= 0 && countOpenFiles <= 20){
+        // Salva arquivo no disco e atualiza apontadores
+        /*printf("%s\n", name);*/
+        diskInsertRecord(&newFile->record, validateFolderName(name));
+    }
+    else {
+        return -1;
+    }
 
-    // Abre o arquivo criado para leitura e escrita e devolve o handle para manipulação
-    /*newFile->handle = countFiles;*/
-    /*files[countFiles] = newFile;*/
-    /*countFiles++;*/
-
-    /*return newFile->handle;*/
+    return newFile->handle;
 }
 
 /*t2fs_file t2fs_open(char *name){*/
@@ -645,30 +785,30 @@ t2fs_file t2fs_create(char *name){
     /*return -1;*/
 /*}*/
 
-int t2fs_close(t2fs_file handle){
-    int i, j;
+/*int t2fs_close(t2fs_file handle){*/
+    /*int i, j;*/
 
-    // Inicializa o disco
-    if(!diskInitialized){
-        t2fs_first(&superblock);
-    }
+    /*// Inicializa o disco*/
+    /*if(!diskInitialized){*/
+        /*t2fs_first(&superblock);*/
+    /*}*/
 
-    for (i = 0; i < MAX_FILES; i++){
-        if (files[i]->handle == handle){
-            free(files[i]);
+    /*for (i = 0; i < MAX_FILES; i++){*/
+        /*if (files[i]->handle == handle){*/
+            /*free(files[i]);*/
 
-            for (j = 0; j < MAX_FILES; j++) {
-                files[j-1] = files[j];
-            }
+            /*for (j = 0; j < MAX_FILES; j++) {*/
+                /*files[j-1] = files[j];*/
+            /*}*/
 
-            countFiles--;
+            /*countFiles--;*/
 
-            return 0;
-        }
-    }
+            /*return 0;*/
+        /*}*/
+    /*}*/
 
-    return -1;
-}
+    /*return -1;*/
+/*}*/
 
 //Reposiciona o current pointer do arquivo
 /*int t2fs_seek(t2fs_file handle, unsigned int offset){*/
