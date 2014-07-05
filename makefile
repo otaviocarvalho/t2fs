@@ -11,6 +11,24 @@ TESTE_IDENTIFY = teste/teste_identify
 TESTE_DELETE = teste/teste_delete
 TESTE_CREATE = teste/teste_create
 
+APP_COPY_SRC = src/copy2t2.c
+APP_COPY_BIN = bin/copy2t2
+APP_DIR_SRC = src/dirt2.c
+APP_DIR_BIN = bin/dirt2
+APP_MKDIR_SRC = src/mkdirt2.c
+APP_MKDIR_BIN = bin/mkdirt2
+APP_RMDIR_SRC = src/rmdirt2.c
+APP_RMDIR_BIN = bin/rmdirt2
+
+app_rmdir_compile: app_mkdir_compile
+		gcc $(APP_RMDIR_SRC) -o $(APP_RMDIR_BIN) $(FLAGS_TESTES_64)
+app_mkdir_compile: app_dir_compile
+		gcc $(APP_MKDIR_SRC) -o $(APP_MKDIR_BIN) $(FLAGS_TESTES_64)
+app_dir_compile: app_copy_compile
+		gcc $(APP_DIR_SRC) -o $(APP_DIR_BIN) $(FLAGS_TESTES_64)
+app_copy_compile: teste_create_run
+		gcc $(APP_COPY_SRC) -o $(APP_COPY_BIN) $(FLAGS_TESTES_64)
+
 teste_create_run: teste_create_compile
 		./$(TESTE_CREATE)
 teste_create_compile: teste_delete_run
