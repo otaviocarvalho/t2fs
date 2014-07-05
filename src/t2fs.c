@@ -114,6 +114,82 @@ void markBlockBitmap(int block, int setbit){
     write_sector(convertBlockToSector(diskBlockSize, blocoWriteBitMap), bitmapBuffer);
 }
 
+// Procura e reserva uma nova posição para um bloco no bitmap
+int diskBitmapReserveBlock(){;
+    int i, j, k;
+    int posByte, posBit, auxByte;
+    char *find = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
+    int newBlock;
+
+    // Busca dados iniciais do bitmap
+    int blockBytesCont = 0;
+    int readNewBlock = 1;
+    int size = diskBitMapReg.bytesFileSize;
+    /*printf("diskBitMapReg bytes %d\n", size);*/
+    for (i = 0; i < size; i++) {
+        /*printf("%d\n", i);*/
+
+        // Primeiro ponteiro direto
+        if (i < diskBlockSize && readNewBlock){
+            // Lê todo o bloco (4 setores)
+            for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]+j), find+(j*SIZE_SECTOR_BYTES));
+            }
+
+            readNewBlock = 0;
+            blockBytesCont = 0;
+        }
+        // Segundo ponteiro direto
+        else if (i < 2*diskBlockSize && readNewBlock){
+            // Lê todo o bloco (4 setores)
+            for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[1]+j), find+(j*SIZE_SECTOR_BYTES));
+            }
+
+            readNewBlock = 0;
+            blockBytesCont = 0;
+        }
+
+        // Percorre o byte atual
+        /*find[1] = 0x7f;*/
+        for (k = 0; k < 8; k++) {
+            /*printf("byte %x\n", (unsigned char) find[i]);*/
+
+            posByte = i;
+            /*printf("posByte %d\n", i);*/
+            posBit = k;
+            /*printf("posBit %d\n", k);*/
+            auxByte = find[posByte] & (1 << posBit);
+            /*printf("auxByte %d\n", auxByte);*/
+
+            // Retorna ao encontrar um espaço vazio
+            if (auxByte == 0){
+                /*printf("entrou vazio byte %d bit %d\n", posByte, posBit);*/
+                newBlock = (posByte*8)+posBit;
+                /*printf("newBlock encontrado %d\n", newBlock);*/
+                markBlockBitmap(newBlock, SET_BIT);
+
+                free(find);
+                // Retorna o número correspondente ao bloco vazio
+                return newBlock;
+            }
+
+            /*break;*/
+        }
+
+        /*if (i == 1)*/
+            /*exit(1);*/
+
+        blockBytesCont++; // Contador que marca quando um novo bloco deve ser lido
+        if (blockBytesCont > diskBlockSize){
+            readNewBlock = 1;
+        }
+    }
+
+    free(find);
+    return -1;
+}
+
 // Função que inicializa as variáveis necessárias para a correta execução do sistema de arquivos
 void initDisk(struct t2fs_superbloco *sblock){
     // Inicializa o cache de arquivos abertos
@@ -130,7 +206,8 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Inicialização do bitmap a partir da variável global do disco BitMapReg
     diskBitMapReg = sblock->BitMapReg;
     char *find = malloc(SIZE_SECTOR_BYTES);
-    int status_read = read_sector(1, find);
+    /*int status_read = read_sector(1, find);*/
+    int status_read = read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]), find);
     if (status_read == 0){
         /*bitmapBuffer = malloc(SIZE_SECTOR_BYTES);*/
         memcpy(bitmapBuffer, find, SIZE_SECTOR_BYTES);
@@ -284,6 +361,9 @@ void initDisk(struct t2fs_superbloco *sblock){
         /*printf("%c", buffer[i]);*/
     /*}*/
     /*printf("\n");*/
+
+    // Teste diskBitmapReserveBlock
+    diskBitmapReserveBlock();
 }
 
 // Função que lê o superbloco do disco na inicialização
@@ -947,36 +1027,6 @@ int t2fs_read(t2fs_file handle, char *buffer, int size){
             /*countFiles--;*/
 
             /*return 0;*/
-        /*}*/
-    /*}*/
-
-    /*return -1;*/
-/*}*/
-
-/*int diskReserveBlock(){*/
-    /*char block[diskBlockSize];*/
-    /*int i;*/
-    /*int bitmapBlock, dataInit;*/
-    /*int posByte, posBit, auxByte;*/
-
-    /*bitmapBlock = diskCtrlSize;*/
-    /*dataInit = diskCtrlSize + diskFreeBlockSize + diskRootSize;*/
-
-    /*[>read_block(bitmapBlock, block);<]*/
-    /*for (i = dataInit; i < diskSize; i++) {*/
-        /*if (i > (bitmapBlock-diskCtrlSize+1)*diskBlockSize*8){*/
-            /*bitmapBlock++;*/
-            /*[>read_block(bitmapBlock, block);<]*/
-        /*}*/
-
-        /*posByte = (i - (bitmapBlock-diskCtrlSize)) / 8;*/
-        /*posBit = 7 - (i % 8);*/
-
-        /*auxByte = block[posByte] &  (1 << posBit);*/
-
-        /*if (auxByte == 0){*/
-            /*markBitmap(i, 1);*/
-            /*return i;*/
         /*}*/
     /*}*/
 
