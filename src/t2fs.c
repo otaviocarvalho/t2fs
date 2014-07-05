@@ -17,8 +17,8 @@
 
 struct file {
     t2fs_file handle;
-    unsigned int currentBytesPos;
-    unsigned int currentBlockPos;
+    unsigned int currentBytesPos; // Deslocamento em bytes do primeiro byte do arquivo
+    unsigned int currentBlockPos; // Deslocamento em blocos do primeiro bloco direto do arquivo
     struct t2fs_record record;
     struct file *next;
     struct file *prev;
@@ -55,6 +55,9 @@ struct file *openFiles;
 int openFilesMap[20] = {0};
 int countOpenFiles = 0;
 int countFiles = 0;
+
+// Protótipos de funções auxiliares
+struct t2fs_record *findFile(char *name);
 
 // Função auxiliar que converte o valor de um bloco para o seu equivalente em trilhas físicas do disco
 int convertBlockToSector(int block_size, int block_number){
@@ -139,6 +142,10 @@ void initDisk(struct t2fs_superbloco *sblock){
 
     // Inicialização do buffer do superbloco
     memcpy(&superBlockBuffer, sblock, sizeof(struct t2fs_superbloco));
+
+    // Ativa a flag de conclusão da inicialização do disco
+    diskInitialized = 1;
+
     /*printf("read superblock copy struct: %c%c%c%c\n", superBlockBuffer.Id[0], superBlockBuffer.Id[1], superBlockBuffer.Id[2], superBlockBuffer.Id[3]);*/
 
     // Teste leitura dos campos do superbloco
@@ -205,7 +212,7 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Teste de varredura dos arquivos/pastas de um diretório
     char *find_folder = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'
     printf("%d -> %d\n", diskRootDirReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]));
-    read_sector(convertBlockToSector(diskBlockSize, 8), find_folder);
+    read_sector(convertBlockToSector(diskBlockSize, 1), find_folder);
     /*read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);*/
     int k=0;
     struct t2fs_record *read_rec = malloc(sizeof(struct t2fs_record));
@@ -260,8 +267,23 @@ void initDisk(struct t2fs_superbloco *sblock){
         /*trav = trav->next;*/
     /*}*/
 
-    // Ativa a flag de conclusão da inicialização do disco
-    diskInitialized = 1;
+    // Teste read/write
+    /*struct file *file_aux_read = malloc(sizeof(struct file));*/
+    /*file_aux_read->currentBytesPos = 0;*/
+
+    /*struct t2fs_record *aux = malloc(sizeof(struct file));*/
+    /*aux = findFile("/dir1/teste1");*/
+    /*memcpy(&file_aux_read->record, aux, sizeof(struct t2fs_record));*/
+    /*printf("teste record %s\n", file_aux_read->record.name);*/
+    /*printf("teste record first pointer %d\n", convertBlockToSector(diskBlockSize, file_aux_read->record.dataPtr[0]));*/
+    /*printf("teste record bytes %d\n", file_aux_read->record.bytesFileSize);*/
+    /*file_aux_read->handle = fileGetHandle(file_aux_read);*/
+    /*char *buffer = malloc(sizeof(char)*diskBlockSize);*/
+    /*t2fs_read(file_aux_read->handle, buffer, file_aux_read->record.bytesFileSize);*/
+    /*for (i = 0; i < file_aux_read->record.bytesFileSize; i++) {*/
+        /*printf("%c", buffer[i]);*/
+    /*}*/
+    /*printf("\n");*/
 }
 
 // Função que lê o superbloco do disco na inicialização
@@ -337,8 +359,9 @@ struct t2fs_record *findFile(char *name){
         }
 
         // Retorna arquivo se encontrou o caminho completo
-        if (found)
+        if (found){
             return file;
+        }
 
         free(tofree);
     }
@@ -480,9 +503,11 @@ int t2fs_delete(char *name){
 }
 
 char *validateFileName(char *name){
-    char *token, *tofree, *string;
+    /*char *token, *tofree, *string;*/
+    char *token, *string;
     char *token_return;
-    tofree = string = strdup(name);
+
+    string = strdup(name);
     while((token = strsep(&string, "/")) != NULL){
         token_return = token;
     }
@@ -760,6 +785,97 @@ int t2fs_seek(t2fs_file handle, unsigned int offset){
     return -1;
 }
 
+struct file *findFileHandle(int handle){
+    struct file *file_aux;
+    file_aux = openFiles;
+
+    // Percorre os arquivos abertos
+    while (file_aux != NULL){
+        // Encontrou o handle
+        if (file_aux->handle == handle){
+            return file_aux;
+        }
+        file_aux = file_aux->next;
+    }
+
+    return NULL;
+}
+
+int t2fs_read(t2fs_file handle, char *buffer, int size){
+    int curPosBytes;
+    int curPosBlocks;
+    int readNewBlock;
+    int blockAddress;
+    int bytesRead = 0;
+
+    // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
+
+    // Aloca bloco para leitura dos setores do disco
+    char *block_read = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)); // Quatro setores
+
+    // Inicializa arquivo e variáveis
+    struct file *fileRead = findFileHandle(handle);
+    if(fileRead != NULL){
+        curPosBytes = fileRead->currentBytesPos;
+
+        //Lê o tamanho em caracteres passado por parâmetro
+        readNewBlock = 1;
+        while (size > 0){
+            // Controla troca de bloco ao terminar de ler um bloco completo
+            if (curPosBytes > diskBlockSize-1)
+                readNewBlock = 1;
+
+            // Incrementa ponteiro para bloco na primeira lida e nas trocas de bloco
+            if (readNewBlock){
+                curPosBlocks = curPosBytes % diskBlockSize; // Deslocamento em blocos com relação ao primeiro bloco
+
+                // Ponteiro direto 1
+                if (curPosBytes < diskBlockSize)
+                    blockAddress = fileRead->record.dataPtr[0];
+
+                // Ponteiro direto 2
+                else if (curPosBytes < 2*diskBlockSize)
+                    blockAddress = fileRead->record.dataPtr[1];
+
+                // Indireção simples
+                /*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
+                    /*blockAddress = block[curPos / diskBlockSize - 2];*/
+
+                // Lê o conteúdo dos setores do bloco para um buffer
+                int i;
+                for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                    read_sector(convertBlockToSector(diskBlockSize, blockAddress)+i, block_read+(i*SIZE_SECTOR_BYTES));
+                }
+
+                // Incrementa bloco na estrutura do file aberto
+                fileRead->currentBlockPos++;
+
+                // Marca para não ler novo bloco até chegar ao fim do novo bloco lido
+                readNewBlock = 0;
+            }
+
+            // Lê cada caractere
+            buffer[curPosBytes] = block_read[curPosBytes];
+
+            // Incrementa os contadores a cada caractere lido
+            curPosBytes++;
+            bytesRead++;
+            size--;
+        }
+
+        // Atualiza a posição em que parou de ler o file aberto
+        fileRead->currentBytesPos = curPosBytes;
+        free(block_read);
+        return bytesRead;
+    }
+
+    free(block_read);
+    return -1;
+}
+
 /*t2fs_file t2fs_open(char *name){*/
     /*// Inicializa o disco*/
     /*if(!diskInitialized){*/
@@ -1002,62 +1118,4 @@ int t2fs_seek(t2fs_file handle, unsigned int offset){
     /*[>write_block(fileWrite->pos, block);<]*/
 
     /*return size;*/
-/*}*/
-
-/*int t2fs_read(t2fs_file handle, char *buffer, int size){*/
-    /*int curPos;*/
-    /*int blockPos;*/
-    /*int blockRead = 0;*/
-    /*int bytesRead = 0;*/
-    /*int blockAddress;*/
-
-     /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
-
-    /*char block[diskBlockSize];*/
-
-    /*// Inicializa arquivo e variáveis*/
-    /*file *fileRead = findFileHandle(handle);*/
-    /*if(fileRead != NULL){*/
-	/*curPos = fileRead->currentPos;*/
-
-	/*//Lê o tamanho em caracteres passado por parâmetro*/
-	/*while (size > 0){*/
-
-		/*if (!blockRead){*/
-			/*blockPos = curPos % diskBlockSize;*/
-
-			/*// Ponteiro direto 1*/
-			/*if (curPos < diskBlockSize)*/
-				/*blockAddress = fileRead->record.dataPtr[0];*/
-
-			/*// Ponteiro direto 2*/
-			/*else if (curPos < 2*diskBlockSize)*/
-				/*blockAddress = fileRead->record.dataPtr[1];*/
-
-			/*// Indireção simples*/
-			/*else if (curPos < (diskBlockSize+2)*diskBlockSize){*/
-				/*blockAddress = block[curPos / diskBlockSize - 2];*/
-
-			/*}*/
-			/*blockRead = 1;*/
-		/*}*/
-
-		/*buffer[bytesRead] = block[blockPos-1];*/
-		/*bytesRead++;*/
-		/*size--;*/
-
-		/*curPos++;*/
-		/*blockPos++;*/
-		/*if (blockPos > diskBlockSize)*/
-			/*blockRead = 0;*/
-
-	/*}*/
-	/*fileRead->currentPos = curPos;*/
-	/*return bytesRead;*/
-
-    /*}*/
-    /*return -1;*/
 /*}*/
