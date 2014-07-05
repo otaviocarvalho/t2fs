@@ -716,15 +716,15 @@ int fileFindNewHandle(){
 }
 
 // Deleta um file da lista de arquivos abertos
-t2fs_file fileDeleteHandle(int handle_delete){
+int t2fs_close(t2fs_file handle){
     struct file *file_aux;
 
     file_aux = openFiles;
     while (file_aux != NULL){
         // Deleta arquivo ao encontrar
-        if (file_aux->handle == handle_delete){
+        if (file_aux->handle == handle){
             // Desmarca do Mapa
-            openFilesMap[handle_delete] = 0;
+            openFilesMap[handle] = 0;
 
             // Deleta o primeiro
             if (file_aux->prev == NULL){
@@ -745,7 +745,7 @@ t2fs_file fileDeleteHandle(int handle_delete){
 
             // Libera o ponteiro e retorna sucesso
             free(file_aux);
-            return 1;
+            return 0;
         }
 
         // Percorre até encontrar o último da lista
