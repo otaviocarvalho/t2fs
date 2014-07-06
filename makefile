@@ -10,6 +10,10 @@ FLAGS_TESTES_64 = -L./lib -lt2fs -lapidisk64 -Wall
 TESTE_IDENTIFY = teste/teste_identify
 TESTE_DELETE = teste/teste_delete
 TESTE_CREATE = teste/teste_create
+TESTE_OPEN = teste/teste_open
+TESTE_READ = teste/teste_read
+TESTE_WRITE = teste/teste_write
+TESTE_SEEK = teste/teste_seek
 
 APP_COPY_SRC = src/copy2t2.c
 APP_COPY_BIN = bin/copy2t2
@@ -26,8 +30,23 @@ app_mkdir_compile: app_dir_compile
 		gcc $(APP_MKDIR_SRC) -o $(APP_MKDIR_BIN) $(FLAGS_TESTES_64)
 app_dir_compile: app_copy_compile
 		gcc $(APP_DIR_SRC) -o $(APP_DIR_BIN) $(FLAGS_TESTES_64)
-app_copy_compile: teste_create_run
+app_copy_compile: teste_write_run
 		gcc $(APP_COPY_SRC) -o $(APP_COPY_BIN) $(FLAGS_TESTES_64)
+
+teste_write_run: teste_write_compile
+		./$(TESTE_WRITE)
+teste_write_compile: teste_read_run
+		gcc $(TESTE_WRITE).c -o $(TESTE_WRITE) $(FLAGS_TESTES_64)
+
+teste_read_run: teste_read_compile
+		./$(TESTE_READ)
+teste_read_compile: teste_open_run
+		gcc $(TESTE_READ).c -o $(TESTE_READ) $(FLAGS_TESTES_64)
+
+teste_open_run: teste_open_compile
+		./$(TESTE_OPEN)
+teste_open_compile: teste_create_run
+		gcc $(TESTE_OPEN).c -o $(TESTE_OPEN) $(FLAGS_TESTES_64)
 
 teste_create_run: teste_create_compile
 		./$(TESTE_CREATE)
