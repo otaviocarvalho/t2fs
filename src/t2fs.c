@@ -684,7 +684,7 @@ char *validateFolderName(char *name){
 
     fileName = validateFileName(name);
 
-    printf("stringlen fileName %s %d %d\n", fileName, strlen(fileName), strlen(name));
+    printf("stringlen fileName %s %d %d\n", fileName, (int)strlen(fileName), (int)strlen(name));
     // Modifica o retorno para raiz e sub-diretórios
     if (strlen(fileName)==strlen(name)-1){
         printf("validatefoldername entrou raiz\n");
@@ -1071,7 +1071,6 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
     int curPosBlocks;
     int writeNewBlock;
     int blockAddress;
-    int bytesWritten = 0;
     int i;
 
     // Inicializa o disco
@@ -1085,26 +1084,37 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
     // Inicializa arquivo e variáveis
     struct file *fileWrite = findFileHandle(handle);
     if(fileWrite != NULL){
-        curPosBytes = fileWrite->currentBytesPos;
+        int bytesWritten = 0; // Posição a escrever com relação ao buffer
+        curPosBytes = fileWrite->currentBytesPos; // Posição a escrever com relação ao bloco do disco físico
+        printf("file struct start currentBytesPos %d\n", curPosBytes);
 
         // Escreve o tamanho em caracteres passado por parâmetro
         writeNewBlock = 1;
+        int firstTime = 1;
         while (size > 0){
             // Controla troca de bloco ao terminar de ler um bloco completo
             if (curPosBytes > diskBlockSize)
                 writeNewBlock = 1;
 
+            printf("countwhile\n");
             // Incrementa ponteiro para bloco na primeira escrita e nas trocas de bloco
             if (writeNewBlock){
                 curPosBlocks = curPosBytes % diskBlockSize; // Deslocamento em blocos com relação ao primeiro bloco
 
                 // Controlar alocação de novos blocos em disco
 
+                printf("heretest\n");
                 // Ponteiro direto 1
                 if (curPosBytes < diskBlockSize){
-                    // Escreve conteúdo modificado de volta no disco
-                    for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
-                        write_sector(convertBlockToSector(diskBlockSize, blockAddress)+i, block_write+(i*SIZE_SECTOR_BYTES));
+                    // Escreve conteúdo do último bloco modificado de volta no disco
+                    if (!firstTime){
+                        for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                            write_sector(convertBlockToSector(diskBlockSize, blockAddress)+i, block_write+(i*SIZE_SECTOR_BYTES));
+                            printf("herewritedisk\n");
+                        }
+                    }
+                    else {
+                        firstTime = 0;
                     }
 
                     // Atualiza para escrever no novo bloco
@@ -1130,8 +1140,18 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
                 writeNewBlock = 0;
             }
 
+            printf("curPosBytes %d\n", curPosBytes);
+            int k;
+            for (k = 0; k < 10; k++) {
+                printf("%c", block_write[k]);
+            }
+            printf("\n");
+
             // Escreve cada caractere
-            block_write[curPosBytes] = buffer[curPosBytes];
+            /*printf("read %c write %c\n", block_write[curPosBytes], buffer[curPosBytes]);*/
+            /*block_write[curPosBytes] = buffer[curPosBytes];*/
+            printf("read %c write %c\n", block_write[curPosBytes], buffer[bytesWritten]);
+            block_write[curPosBytes] = buffer[bytesWritten];
 
             // Incrementa os contadores a cada caractere lido
             curPosBytes++;
@@ -1139,8 +1159,15 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
             size--;
         }
 
+        // Escreve último bloco modificado no disco
+        for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+            printf("write sector %d\n", convertBlockToSector(diskBlockSize, blockAddress)+i);
+            write_sector(convertBlockToSector(diskBlockSize, blockAddress)+i, block_write+(i*SIZE_SECTOR_BYTES));
+        }
+
         // Atualiza a posição em que parou de ler o file aberto
         fileWrite->currentBytesPos = curPosBytes;
+        printf("file struct end currentBytesPos %d\n", curPosBytes);
         free(block_write);
         return bytesWritten;
     }
