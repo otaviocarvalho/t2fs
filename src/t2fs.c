@@ -35,36 +35,24 @@ struct t2fs_record diskBitMapReg;
 struct t2fs_record diskRootDirReg;
 
 // Estruturas de buffer a serem persistidas no disco físico
-struct t2fs_superbloco superBlockBuffer;
-char bitmapBuffer[SIZE_SECTOR_BYTES];
-/*unsigned char **bitmapBuffer;*/
-
-/*unsigned char diskVersion;*/
-/*unsigned int diskSize;*/ // Era dado em blocos, agora é em bytes (diskSize / blockSize == diskSizeAnterior)
-/*unsigned short diskBlockSize;*/
-/*unsigned short diskFileEntrySize;*/
-// Substituir estruturas sem equivalência nessa versão
-unsigned char diskCtrlSize; // Não existe, o ctrlSize é determinado pelo SuperBlockSize
-unsigned short diskFreeBlockSize; // Era o tamanho do bitmap, agora o bitmap é passado por parâmetro
-unsigned short diskRootSize; // Era o número de blocos do diretório, agora o diretório é passado por parâmetro
-unsigned short diskFileEntrySize; // Era o tamanho de um registro no diretório. Desnecessário, é o tamanho do t2fs_record
+/*struct t2fs_superbloco superBlockBuffer;*/
+/*char bitmapBuffer[SIZE_SECTOR_BYTES];*/
 
 struct t2fs_superbloco superblock;
 
 struct file *openFiles;
 int openFilesMap[20] = {0};
 int countOpenFiles = 0;
-int countFiles = 0;
+/*int countFiles = 0;*/
 
 // Protótipos de funções auxiliares
 struct t2fs_record *findFile(char *name);
+int t2fs_first(struct t2fs_superbloco *findStruct);
 
 // Função auxiliar que converte o valor de um bloco para o seu equivalente em trilhas físicas do disco
 int convertBlockToSector(int block_size, int block_number){
     return (block_number * (block_size / SIZE_SECTOR_BYTES)) + 1;
 }
-
-int t2fs_first(struct t2fs_superbloco *findStruct);
 
 // função para identificar os componentes do grupo responsável pelo desenvolvimento deste trabalho
 char *t2fs_identify(void){
@@ -83,6 +71,7 @@ char *t2fs_identify(void){
 // Função que altera o bitmap e persiste o resultado no disco físico
 void markBlockBitmap(int block, int setbit){
     int posByte, posBit;
+    int i;
     unsigned char block_copy;
 
     // Encontra byte e bit especifico a serem modificados
@@ -91,7 +80,18 @@ void markBlockBitmap(int block, int setbit){
     /*printf("posByte %x\n", posByte);*/
     /*printf("posBit %x\n", posBit);*/
 
-    memcpy(&block_copy, bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
+    // Endereçar ponteiros diretos
+    int blockAddress = diskBitMapReg.dataPtr[0];
+    // Endereçar ponteiros indiretos
+
+    // Lê bloco do disco físico
+    char *find = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
+    for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+        printf("test count sectors read\n");
+        read_sector(convertBlockToSector(diskBlockSize, blockAddress)+i, find+(i*SIZE_SECTOR_BYTES));
+    }
+
+    memcpy(&block_copy, find+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
     /*printf("blockCopy %x\n", block_copy);*/
     // Faz set ou unset do bit especificado
     if (setbit){
@@ -103,15 +103,20 @@ void markBlockBitmap(int block, int setbit){
     /*printf("blockCopy after set/unset %x\n", block_copy);*/
 
     // Salva o valor no bitmap
-    memcpy(bitmapBuffer+(posByte*sizeof(unsigned char)), &block_copy, sizeof(unsigned char));
-    memcpy(&block_copy, bitmapBuffer+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
+    memcpy(find+(posByte*sizeof(unsigned char)), &block_copy, sizeof(unsigned char));
+    memcpy(&block_copy, find+(posByte*sizeof(unsigned char)), sizeof(unsigned char));
     /*printf("novo valor no bitmap %x\n", block_copy);*/
 
     // Escolha do bloco onde escrever o bitmap
-    int blocoWriteBitMap = diskBitMapReg.dataPtr[0];
+    int blockWriteBitMap = diskBitMapReg.dataPtr[0];
+    // Endereçar ponteiros indiretos
+
     // Persiste o bitmap alterado no disco
     /*printf("bitmap block %d bitmap sector %d\n", blocoWriteBitMap, convertBlockToSector(diskBlockSize, blocoWriteBitMap));*/
-    write_sector(convertBlockToSector(diskBlockSize, blocoWriteBitMap), bitmapBuffer);
+    /*write_sector(convertBlockToSector(diskBlockSize, blocoWriteBitMap), find);*/
+    for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+        write_sector(convertBlockToSector(diskBlockSize, blockWriteBitMap)+i, find+(i*SIZE_SECTOR_BYTES));
+    }
 }
 
 // Procura e reserva uma nova posição para um bloco no bitmap
@@ -149,6 +154,7 @@ int diskBitmapReserveBlock(){;
             readNewBlock = 0;
             blockBytesCont = 0;
         }
+        // Ponteiros indiretos
 
         // Percorre o byte atual
         /*find[1] = 0x7f;*/
@@ -205,20 +211,20 @@ void initDisk(struct t2fs_superbloco *sblock){
 
     // Inicialização do bitmap a partir da variável global do disco BitMapReg
     diskBitMapReg = sblock->BitMapReg;
-    char *find = malloc(SIZE_SECTOR_BYTES);
+    /*char *find = malloc(SIZE_SECTOR_BYTES);*/
     /*int status_read = read_sector(1, find);*/
-    int status_read = read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]), find);
-    if (status_read == 0){
+    /*int status_read = read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]), find);*/
+    /*if (status_read == 0){*/
         /*bitmapBuffer = malloc(SIZE_SECTOR_BYTES);*/
-        memcpy(bitmapBuffer, find, SIZE_SECTOR_BYTES);
-    }
-    free(find);
+        /*memcpy(bitmapBuffer, find, SIZE_SECTOR_BYTES);*/
+    /*}*/
+    /*free(find);*/
 
     // Inicialização do diretório corrente do disco a partir da variável global do disco RootDirReg
     diskRootDirReg = sblock->RootDirReg;
 
     // Inicialização do buffer do superbloco
-    memcpy(&superBlockBuffer, sblock, sizeof(struct t2fs_superbloco));
+    /*memcpy(&superBlockBuffer, sblock, sizeof(struct t2fs_superbloco));*/
 
     // Ativa a flag de conclusão da inicialização do disco
     diskInitialized = 1;
@@ -264,13 +270,18 @@ void initDisk(struct t2fs_superbloco *sblock){
     // Teste de mapeamento do bloco lógico para setor do disco físico
     /*printf("block to sector map: %d block to %d sector\n", diskBitMapReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]));*/
 
+
     // Teste de leitura do bitmap
+    char *find = malloc(SIZE_SECTOR_BYTES);
+    read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]), find);
+    /*free(find);*/
     int i;
-    for (i = 0; i < diskBitMapReg.bytesFileSize/8; i++) {
-        printf("%x\n", (unsigned char) bitmapBuffer[i]);
+    for (i = 0; i < (diskBitMapReg.bytesFileSize/8)*(diskBlockSize/SIZE_SECTOR_BYTES); i++) {
+        printf("%d %x\n",i, (unsigned char) find[i]);
     }
     // Teste de mudança no bitmap
-    /*markBlockBitmap(126,SET_BIT);*/
+    /*markBlockBitmap(511,SET_BIT);*/
+    /*markBlockBitmap(127,SET_BIT);*/
 
     // Teste de mudança no superbloco, escrita no disco e posterior leitura do superbloco
     /*unsigned char *find = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'*/
@@ -789,7 +800,6 @@ int fileFindNewHandle(){
 
 // Cria um novo file na lista de arquivos abertos
 t2fs_file fileGetHandle(struct file *new){
-    int handle = -1;
     struct file *file_aux;
 
     file_aux = openFiles;
@@ -914,11 +924,6 @@ t2fs_file t2fs_create(char *name){
     if(!diskInitialized){
         t2fs_first(&superblock);
     }
-
-    /*// Verifica se um arquivo pode ser criado*/
-    /*if (countFiles > disk-1){*/
-        /*return -1;*/
-    /*}*/
 
     // Valida o nome do arquivo
     validatedName = validateFileName(name);
@@ -1175,140 +1180,3 @@ int t2fs_write(t2fs_file handle, char *buffer, int size){
     free(block_write);
     return -1;
 }
-
-/*int t2fs_write(t2fs_file handle, char *buffer, int size){*/
-    /*int origSize;*/
-    /*int maxSizePossible;*/
-    /*int sizeLeft, spaceLeft, actualSize;*/
-    /*int blockAddress, indBlockAddress;*/
-    /*int positionPointer;*/
-    /*int i;*/
-
-    /*// Inicializa o disco*/
-    /*if(!diskInitialized){*/
-        /*t2fs_first(&superblock);*/
-    /*}*/
-
-    /*char block[diskBlockSize];*/
-
-    /*// Busca arquivo a ser escrito e atualiza os ponteiros*/
-    /*file *fileWrite = findFile(handle);*/
-    /*origSize = fileWrite->record.bytesFileSize;*/
-
-    /*// Controla o máximo possível a ser escrito no arquivo*/
-    /*maxSizePossible = 2*diskBlockSize + diskBlockSize*diskBlockSize + diskBlockSize*diskBlockSize*diskBlockSize;*/
-    /*if (size + origSize > maxSizePossible){*/
-        /*printf("Error: Limit size reached, isn't possible to write at such file length\n");*/
-        /*return -1;*/
-    /*}*/
-
-    /*// Controla os tamanhos restantes para escrita no disco*/
-    /*sizeLeft = size;*/
-    /*spaceLeft = (fileWrite->record.blocksFileSize * diskBlockSize) - fileWrite->record.bytesFileSize;*/
-    /*actualSize = fileWrite->record.bytesFileSize;*/
-
-    /*// Escreve enquanto houver espaço*/
-    /*while (sizeLeft > 0){*/
-        /*// Alocar mais espaço*/
-        /*if (spaceLeft == 0){*/
-            /*positionPointer = 0;*/
-
-            /*blockAddress = diskReserveBlock(); // Aloca um novo bloco no disco*/
-            /*if (blockAddress < 1){*/
-                /*printf("Error: Wasn't possible to allocate a new block\n");*/
-                /*return -1;*/
-            /*}*/
-
-            /*// Atualiza novo espaço disponível no disco*/
-            /*spaceLeft = diskBlockSize;*/
-            /*fileWrite->record.blocksFileSize++;*/
-
-            /*// Ponteiro direto 1*/
-            /*if (actualSize == 0){*/
-                /*fileWrite->record.dataPtr[0] = blockAddress;*/
-            /*}*/
-            /*// Ponteiro direto 2*/
-            /*else if (actualSize < 2*diskBlockSize){*/
-                /*fileWrite->record.dataPtr[1] = blockAddress;*/
-            /*}*/
-            /*// Aloca ponteiro indireto*/
-            /*else if (actualSize == 2*diskBlockSize){*/
-                /*indBlockAddress = diskReserveBlock();*/
-                /*if (indBlockAddress < 1){*/
-                    /*printf("Error: Wasn't possible to allocate a new indirection block");*/
-                /*}*/
-
-                /*// Inicializa bloco de índice*/
-                /*fileWrite->record.singleIndPtr = indBlockAddress;*/
-                /*block[0] = diskBlockSize;*/
-                /*for (i = 1; i < diskBlockSize; i++){*/
-                    /*block[i] = 0;*/
-                /*}*/
-
-                /*// Grava bloco de índice no disco*/
-                /*[>write_block(indBlockAddress, block);<]*/
-            /*}*/
-            /*// Utiliza ponteiro indireto*/
-            /*else if (actualSize < (diskBlockSize+2)*diskBlockSize){*/
-                /*[>read_block(fileWrite->record.singleIndPtr, block);<]*/
-                /*block[fileWrite->record.blocksFileSize - 3] = blockAddress;*/
-                /*[>write_block(fileWrite->record.singleIndPtr, block);<]*/
-            /*}*/
-            /*else {*/
-                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
-                /*return -1;*/
-            /*}*/
-        /*}*/
-        /*// Usar o espaço restante*/
-        /*else {*/
-            /*positionPointer = actualSize % diskBlockSize;*/
-            /*[>printf("positionPointer %d\n", positionPointer);<]*/
-
-            /*if (actualSize < diskBlockSize){*/
-                /*blockAddress = fileWrite->record.dataPtr[0];*/
-            /*}*/
-            /*else if (actualSize < 2*diskBlockSize){*/
-                /*blockAddress = fileWrite->record.dataPtr[1];*/
-            /*}*/
-            /*else if (actualSize < (diskBlockSize+2)*diskBlockSize){*/
-                /*[>read_block(fileWrite->record.singleIndPtr, block);<]*/
-                /*blockAddress = block[fileWrite->record.blocksFileSize - 3];*/
-            /*}*/
-            /*else {*/
-                /*printf("Error: Limit Reached. Double indirection pointers were not implemented yet in this version\n");*/
-                /*return -1;*/
-            /*}*/
-
-            /*[>printf("actualSize %d, blockAddress %d, diskBlockSize %d\n", actualSize, blockAddress, diskBlockSize);<]*/
-            /*// Lê o bloco*/
-            /*[>read_block(blockAddress, block);<]*/
-        /*}*/
-
-        /*// Preenche o bloco*/
-        /*i = 0;*/
-        /*while (positionPointer < diskBlockSize && sizeLeft > 0){*/
-            /*block[positionPointer] = block[i];*/
-            /*i++;*/
-            /*positionPointer++;*/
-            /*sizeLeft--;*/
-            /*spaceLeft--;*/
-        /*}*/
-
-        /*// Escreve no disco*/
-        /*[>write_block(blockAddress, block);<]*/
-        /*actualSize = origSize + size - sizeLeft;*/
-    /*}*/
-
-    /*// Atualiza arquivo*/
-    /*fileWrite->record.bytesFileSize = actualSize;*/
-    /*fileWrite->record.blocksFileSize = actualSize / diskBlockSize;*/
-    /*if (positionPointer < diskBlockSize){*/
-        /*fileWrite->record.blocksFileSize++;*/
-    /*}*/
-
-    /*[>read_block(fileWrite->pos, block);<]*/
-    /*memcpy(block+fileWrite->blockPos, &(fileWrite->record), FILE_REGISTER);*/
-    /*[>write_block(fileWrite->pos, block);<]*/
-
-    /*return size;*/
-/*}*/

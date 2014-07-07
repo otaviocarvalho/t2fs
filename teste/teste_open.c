@@ -18,5 +18,9 @@ int main(){
     /*open_file = t2fs_open("/dir1/xyz");*/
     /*printf("open file %s result: %d\n", "/dir1/xyz", open_file);*/
 
+    // Teste abertura de 20 arquivos
+    /*open_file = t2fs_open("/dir1/xyz");*/
+    /*printf("open file %s result: %d\n", "/dir1/xyz", open_file);*/
+
     return 0;
 }

@@ -30,8 +30,13 @@ app_mkdir_compile: app_dir_compile
 		gcc $(APP_MKDIR_SRC) -o $(APP_MKDIR_BIN) $(FLAGS_TESTES_64)
 app_dir_compile: app_copy_compile
 		gcc $(APP_DIR_SRC) -o $(APP_DIR_BIN) $(FLAGS_TESTES_64)
-app_copy_compile: teste_write_run
+app_copy_compile: teste_seek_run
 		gcc $(APP_COPY_SRC) -o $(APP_COPY_BIN) $(FLAGS_TESTES_64)
+
+teste_seek_run: teste_seek_compile
+		./$(TESTE_SEEK)
+teste_seek_compile: teste_write_run
+		gcc $(TESTE_SEEK).c -o $(TESTE_SEEK) $(FLAGS_TESTES_64)
 
 teste_write_run: teste_write_compile
 		./$(TESTE_WRITE)
