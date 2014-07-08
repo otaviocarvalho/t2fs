@@ -24,40 +24,20 @@ APP_MKDIR_BIN = bin/mkdirt2
 APP_RMDIR_SRC = src/rmdirt2.c
 APP_RMDIR_BIN = bin/rmdirt2
 
-#teste_delete_run: teste_delete_compile
-		#./$(TESTE_DELETE)
-#teste_delete_compile: teste_seek_run
-		#gcc $(TESTE_DELETE).c -o $(TESTE_DELETE) $(FLAGS_TESTES_64)
-
-#teste_seek_run: teste_seek_compile
-		#./$(TESTE_SEEK)
-#teste_seek_compile: teste_write_run
-		#gcc $(TESTE_SEEK).c -o $(TESTE_SEEK) $(FLAGS_TESTES_64)
-
-#teste_write_run: teste_write_compile
-		#./$(TESTE_WRITE)
-#teste_write_compile: teste_read_run
-		#gcc $(TESTE_WRITE).c -o $(TESTE_WRITE) $(FLAGS_TESTES_64)
-
-#teste_read_run: teste_read_compile
-		#./$(TESTE_READ)
-#teste_read_compile: teste_open_run
-		#gcc $(TESTE_READ).c -o $(TESTE_READ) $(FLAGS_TESTES_64)
-
-#teste_open_run: teste_open_compile
-		#./$(TESTE_OPEN)
-#teste_open_compile: teste_create_run
-		#gcc $(TESTE_OPEN).c -o $(TESTE_OPEN) $(FLAGS_TESTES_64)
-
-#teste_create_run: teste_create_compile
-		#./$(TESTE_CREATE)
-#teste_create_compile: teste_identify_run
-		#gcc $(TESTE_CREATE).c -o $(TESTE_CREATE) $(FLAGS_TESTES_64)
-
-#teste_identify_run: teste_identify_compile
-		#./$(TESTE_IDENTIFY)
-#teste_identify_compile: app_rmdir_compile
-		#gcc $(TESTE_IDENTIFY).c -o $(TESTE_IDENTIFY) $(FLAGS_TESTES_64)
+teste_delete_compile: teste_seek_compile
+		gcc $(TESTE_DELETE).c -o $(TESTE_DELETE) $(FLAGS_TESTES_64)
+teste_seek_compile: teste_write_compile
+		gcc $(TESTE_SEEK).c -o $(TESTE_SEEK) $(FLAGS_TESTES_64)
+teste_write_compile: teste_read_compile
+		gcc $(TESTE_WRITE).c -o $(TESTE_WRITE) $(FLAGS_TESTES_64)
+teste_read_compile: teste_open_compile
+		gcc $(TESTE_READ).c -o $(TESTE_READ) $(FLAGS_TESTES_64)
+teste_open_compile: teste_create_compile
+		gcc $(TESTE_OPEN).c -o $(TESTE_OPEN) $(FLAGS_TESTES_64)
+teste_create_compile: teste_identify_compile
+		gcc $(TESTE_CREATE).c -o $(TESTE_CREATE) $(FLAGS_TESTES_64)
+teste_identify_compile: app_rmdir_compile
+		gcc $(TESTE_IDENTIFY).c -o $(TESTE_IDENTIFY) $(FLAGS_TESTES_64)
 
 app_rmdir_compile: app_mkdir_compile
 		gcc $(APP_RMDIR_SRC) -o $(APP_RMDIR_BIN) $(FLAGS_TESTES_64)
