@@ -24,15 +24,6 @@ APP_MKDIR_BIN = bin/mkdirt2
 APP_RMDIR_SRC = src/rmdirt2.c
 APP_RMDIR_BIN = bin/rmdirt2
 
-app_rmdir_compile: app_mkdir_compile
-		gcc $(APP_RMDIR_SRC) -o $(APP_RMDIR_BIN) $(FLAGS_TESTES_64)
-app_mkdir_compile: app_dir_compile
-		gcc $(APP_MKDIR_SRC) -o $(APP_MKDIR_BIN) $(FLAGS_TESTES_64)
-app_dir_compile: app_copy_compile
-		gcc $(APP_DIR_SRC) -o $(APP_DIR_BIN) $(FLAGS_TESTES_64)
-app_copy_compile: teste_seek_run
-		gcc $(APP_COPY_SRC) -o $(APP_COPY_BIN) $(FLAGS_TESTES_64)
-
 teste_seek_run: teste_seek_compile
 		./$(TESTE_SEEK)
 teste_seek_compile: teste_write_run
@@ -65,8 +56,18 @@ teste_delete_compile: teste_identify_run
 
 teste_identify_run: teste_identify_compile
 		./$(TESTE_IDENTIFY)
-teste_identify_compile: $(OUT_LIB)
+teste_identify_compile: app_rmdir_compile
 		gcc $(TESTE_IDENTIFY).c -o $(TESTE_IDENTIFY) $(FLAGS_TESTES_64)
+
+app_rmdir_compile: app_mkdir_compile
+		gcc $(APP_RMDIR_SRC) -o $(APP_RMDIR_BIN) $(FLAGS_TESTES_64)
+app_mkdir_compile: app_dir_compile
+		gcc $(APP_MKDIR_SRC) -o $(APP_MKDIR_BIN) $(FLAGS_TESTES_64)
+app_dir_compile: app_copy_compile
+		gcc $(APP_DIR_SRC) -o $(APP_DIR_BIN) $(FLAGS_TESTES_64)
+app_copy_compile: $(OUT_LIB)
+		gcc $(APP_COPY_SRC) -o $(APP_COPY_BIN) $(FLAGS_TESTES_64)
+
 
 $(OUT_LIB): $(OBJ_T2FS)
 		ar crs $(OUT_LIB) $(OBJ_T2FS) $(DEP_LIB_64)

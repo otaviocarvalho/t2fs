@@ -4,13 +4,13 @@
 #include "apidisk.h"
 #include "t2fs.h"
 
-#define MAX_BLOCK_SIZE 65536
-#define FILE_REGISTER 64
+/*#define MAX_BLOCK_SIZE 65536*/
+/*#define FILE_REGISTER 64*/
 #define MAX_FILES 20
 #define MAX_FILE_NAME 39
 
 #define SIZE_SECTOR_BYTES 256
-#define SIZE_SUPERBLOCK_BYTES 256
+/*#define SIZE_SUPERBLOCK_BYTES 256*/
 
 #define SET_BIT 1
 #define UNSET_BIT 0
@@ -138,7 +138,7 @@ int diskBitmapReserveBlock(){;
         if (i < diskBlockSize && readNewBlock){
             // Lê todo o bloco (4 setores)
             for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
-                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]+j), find+(j*SIZE_SECTOR_BYTES));
+                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0])+j, find+(j*SIZE_SECTOR_BYTES));
             }
 
             readNewBlock = 0;
@@ -148,7 +148,7 @@ int diskBitmapReserveBlock(){;
         else if (i < 2*diskBlockSize && readNewBlock){
             // Lê todo o bloco (4 setores)
             for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
-                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[1]+j), find+(j*SIZE_SECTOR_BYTES));
+                read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[1])+j, find+(j*SIZE_SECTOR_BYTES));
             }
 
             readNewBlock = 0;
@@ -298,13 +298,20 @@ void initDisk(struct t2fs_superbloco *sblock){
     /*free(findStruct);*/
 
     // Teste de varredura dos arquivos/pastas de um diretório
-    char *find_folder = malloc(SIZE_SECTOR_BYTES); // Lê um setor do disco 'físico'
+    char *find_folder = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)); // Lê um setor do disco 'físico'
     printf("%d -> %d\n", diskRootDirReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]));
-    read_sector(convertBlockToSector(diskBlockSize, 8), find_folder);
+    /*read_sector(convertBlockToSector(diskBlockSize, 8), find_folder);*/
     /*read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);*/
+
+    int j;
+    for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+        printf("%d\n",convertBlockToSector(diskBlockSize, 8)+j);
+        read_sector(convertBlockToSector(diskBlockSize, 8)+j, find_folder+(j*SIZE_SECTOR_BYTES));
+    }
+
     int k=0;
     struct t2fs_record *read_rec = malloc(sizeof(struct t2fs_record));
-    while(k < SIZE_SECTOR_BYTES){
+    while(k < SIZE_SECTOR_BYTES*4){
         memcpy(read_rec, find_folder+k, sizeof(struct t2fs_record));
         printf("%s\n", read_rec->name);
         printf("tipo: %x\n", read_rec->TypeVal);
@@ -406,14 +413,17 @@ int t2fs_first(struct t2fs_superbloco *findStruct){
 struct t2fs_record *findFile(char *name){
     char *token, *string, *tofree;
     struct t2fs_record *file = malloc(sizeof(struct t2fs_record));
-    char *find_folder = malloc(SIZE_SECTOR_BYTES);
+    char *find_folder = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
     int found, count_bytes;
+    int i;
 
     tofree = string = strdup(name);
     if (string != NULL){
         // Testa leitura do primeiro arquivo do diretório raiz "/"
         if (strcmp(&string[0],"/")){
-            read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);
+            for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0])+i, find_folder+(i*SIZE_SECTOR_BYTES));
+            }
             memcpy(file, find_folder, sizeof(struct t2fs_record));
             string++;
         }
@@ -428,7 +438,7 @@ struct t2fs_record *findFile(char *name){
             // Procura pelo nome no primeiro setor
             found = 0;
             count_bytes = 0;
-            while (count_bytes < SIZE_SECTOR_BYTES && !found){
+            while ((count_bytes < SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)) && !found){
                 memcpy(file, find_folder+count_bytes, sizeof(struct t2fs_record));
                 printf("percorreu %s\n", file->name);
                 // Testa se encontrou o pedaço do caminho
@@ -446,7 +456,9 @@ struct t2fs_record *findFile(char *name){
 
             // Lê subdiretório se for uma pasta e ainda não encontrou a pasta/arquivo que procurava
             if (file->TypeVal == TYPEVAL_DIRETORIO && found){
-                read_sector(convertBlockToSector(diskBlockSize, file->dataPtr[0]), find_folder);
+                for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                    read_sector(convertBlockToSector(diskBlockSize, file->dataPtr[0])+i, find_folder+(i*SIZE_SECTOR_BYTES));
+                }
                 memcpy(file, find_folder, sizeof(struct t2fs_record));
                 /*found = 0;*/
             }
@@ -470,15 +482,18 @@ struct t2fs_record *findFile(char *name){
 struct t2fs_record *findFolder(char *name){
     char *token, *string, *tofree;
     struct t2fs_record *file = malloc(sizeof(struct t2fs_record));
-    char *find_folder = malloc(SIZE_SECTOR_BYTES);
+    char *find_folder = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
     int found, count_bytes;
+    int i;
 
     tofree = string = strdup(name);
 
     if (string != NULL){
         // Testa leitura do primeiro arquivo do diretório raiz "/"
         if (string[0] == '/'){
-            read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]), find_folder);
+            for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0])+i, find_folder+(i*SIZE_SECTOR_BYTES));
+            }
             memcpy(file, find_folder, sizeof(struct t2fs_record));
             string++;
         }
@@ -499,7 +514,9 @@ struct t2fs_record *findFolder(char *name){
             if(!firstTime){
                 // Lê subdiretório se for uma pasta e ainda não encontrou a pasta/arquivo que procurava
                 if (file->TypeVal == TYPEVAL_DIRETORIO && found){
-                    read_sector(convertBlockToSector(diskBlockSize, file->dataPtr[0]), find_folder);
+                    for (i = 0; i < diskBlockSize/SIZE_SECTOR_BYTES; i++) {
+                        read_sector(convertBlockToSector(diskBlockSize, file->dataPtr[0])+i, find_folder+(i*SIZE_SECTOR_BYTES));
+                    }
                     memcpy(file, find_folder, sizeof(struct t2fs_record));
                 }
             }
@@ -510,7 +527,7 @@ struct t2fs_record *findFolder(char *name){
             // Procura pelo nome no primeiro setor
             found = 0;
             count_bytes = 0;
-            while (count_bytes < SIZE_SECTOR_BYTES && !found){
+            while ((count_bytes < SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)) && !found){
                 memcpy(file, find_folder+count_bytes, sizeof(struct t2fs_record));
                 printf("percorreu %s\n", file->name);
                 // Testa se encontrou o pedaço do caminho
@@ -538,25 +555,30 @@ struct t2fs_record *findFolder(char *name){
     free(file);
     return NULL;
 }
+
 // Função auxiliar para invalidação dos blocos alocados para um arquivo
-void invalidateFile(char *name){
+int invalidateFile(char *name){
     char *token, *string, *tofree;
     struct t2fs_record *file = malloc(sizeof(struct t2fs_record));
-    char *find_folder = malloc(SIZE_SECTOR_BYTES);
+    char *find_folder = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
     int found, count_bytes;
     int currentSector;
+    int firstSectorBlock;
+    int j;
 
     tofree = string = strdup(name);
     if (string != NULL){
         // Testa leitura do primeiro arquivo do diretório raiz "/"
         if (strcmp(&string[0],"/")){
-            currentSector = convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]);
-            read_sector(currentSector, find_folder);
+            currentSector = firstSectorBlock = convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]);
+            for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+                read_sector(currentSector+j, find_folder+(j*SIZE_SECTOR_BYTES));
+            }
             memcpy(file, find_folder, sizeof(struct t2fs_record));
             string++;
         }
         else {
-            return;
+            return -1;
         }
 
         // Testa a leitura dos subdiretórios ou arquivos
@@ -566,7 +588,7 @@ void invalidateFile(char *name){
             // Procura pelo nome no primeiro setor
             found = 0;
             count_bytes = 0;
-            while (count_bytes < SIZE_SECTOR_BYTES && !found){
+            while ((count_bytes < SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)) && !found){
                 memcpy(file, find_folder+count_bytes, sizeof(struct t2fs_record));
                 printf("percorreu %s\n", file->name);
                 // Testa se encontrou o pedaço do caminho
@@ -580,13 +602,14 @@ void invalidateFile(char *name){
                     count_bytes += sizeof(struct t2fs_record);
                 }
             }
-            if (strcmp(token," ") == 0)
-                printf("here1\n");
 
             // Lê subdiretório se for uma pasta
             if (file->TypeVal == TYPEVAL_DIRETORIO){
                 currentSector = convertBlockToSector(diskBlockSize, file->dataPtr[0]);
-                read_sector(currentSector, find_folder);
+
+                for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+                    read_sector(currentSector+j, find_folder+(j*SIZE_SECTOR_BYTES));
+                }
                 memcpy(file, find_folder, sizeof(struct t2fs_record));
             }
         }
@@ -595,7 +618,9 @@ void invalidateFile(char *name){
         if (found){
             file->TypeVal = TYPEVAL_INVALIDO;
             memcpy(find_folder+count_bytes, file, sizeof(struct t2fs_record));
-            write_sector(currentSector, find_folder);
+            for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+                write_sector(currentSector+j, find_folder+(j*SIZE_SECTOR_BYTES));
+            }
         }
 
         free(tofree);
@@ -603,7 +628,7 @@ void invalidateFile(char *name){
 
     free(find_folder);
     free(file);
-    return;
+    return 0;
 }
 
 // Função que deleta um arquivo do sistema de arquivos e libera seus blocos
@@ -657,7 +682,10 @@ int t2fs_delete(char *name){
 
         // Invalida registro no disco físico
         /*del_rec->TypeVal = TYPEVAL_INVALIDO;*/
-        invalidateFile(name);
+        int return_invalidate = invalidateFile(name);
+        if (return_invalidate == -1){
+            return -1;
+        }
         /*read_sector(deleteFile->pos, block);*/
         /*block[deleteFile->blockPos] = block[deleteFile->blockPos] & 0x7F;*/
         /*write_sector(deleteFile->pos, block);*/
@@ -715,8 +743,11 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
     struct t2fs_record *find_folder;
     struct t2fs_record *find_record = malloc(sizeof(struct t2fs_record));
     struct t2fs_record *free_record = malloc(sizeof(struct t2fs_record));
-    char *find_folder_sector = malloc(SIZE_SECTOR_BYTES);
+    char *find_folder_sector = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES));
     int find_record_displacement = 0;
+    int find_record_sector = 0;
+    int firstSectorBlock;
+    int j;
 
     printf("procura folder %s\n", folder_name);
     // Procura pasta no disco
@@ -731,24 +762,30 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
     // Insere novo arquivo na pasta encontrada
     if (find_folder->TypeVal == TYPEVAL_DIRETORIO){
         // Ponteiro direto
-        int currentSector = convertBlockToSector(diskBlockSize, find_folder->dataPtr[0]);
+        int currentSector = firstSectorBlock = convertBlockToSector(diskBlockSize, find_folder->dataPtr[0]);
         int currentBlock = find_folder->dataPtr[0];
         printf("currenBlock %d\n", currentBlock);
         // Indireção simples
         // Indireção dupla
 
-        // Lê a pasta para escrita do disco
-        read_sector(currentSector, find_folder_sector);
+        // Lê o bloco da pasta para escrita do novo record
+        for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
+            read_sector(currentSector+j, find_folder_sector+(j*SIZE_SECTOR_BYTES));
+        }
         memcpy(free_record, find_folder_sector, sizeof(struct t2fs_record));
 
         // Procura a primeira entrada inválida para escrita do novo record
         int i = 0;
         int found = 0;
-        while(i < SIZE_SECTOR_BYTES){
+        printf("current sector while %d\n", currentSector);
+        while(i < SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)){
+            printf("%d %s\n",i, free_record->name);
             // Guarda marcador do primeiro espaço livre
             if (free_record->TypeVal != TYPEVAL_DIRETORIO && free_record->TypeVal != TYPEVAL_REGULAR && !found){
+                printf("find free space %d sector %d\n", i, currentSector);
                 memcpy(find_record, free_record, sizeof(struct t2fs_record));
                 find_record_displacement = i;
+                find_record_sector = currentSector;
                 found = 1;
             }
 
@@ -756,12 +793,16 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
             if (strcmp(free_record->name, new_record->name) == 0){
                 memcpy(find_record, free_record, sizeof(struct t2fs_record));
                 find_record_displacement = i;
+                find_record_sector = currentSector;
                 // Limpa os blocos alocados anteriormente
                 /*diskCleanBlocks(free_record);*/
                 found = 1;
             }
 
             // Lê a próxima entrada da pasta
+            if (i != 0 && ((i + sizeof(struct t2fs_record)) % SIZE_SECTOR_BYTES == 0)){
+                currentSector++; // Atualiza setor corrente a cada um lido
+            }
             i += sizeof(struct t2fs_record);
             memcpy(free_record, find_folder_sector+i, sizeof(struct t2fs_record));
         }
@@ -770,7 +811,12 @@ int diskInsertRecord(struct t2fs_record *new_record, char *folder_name){
         if (found){
             // Escreve o novo record
             memcpy(find_folder_sector+find_record_displacement, new_record, sizeof(struct t2fs_record));
-            write_sector(currentSector, find_folder_sector);
+            printf("test %s\n", find_folder_sector+find_record_displacement);
+            printf("find record sector %d\n", find_record_sector);
+            int block_bytes_displacement = (find_record_sector-firstSectorBlock)*SIZE_SECTOR_BYTES;
+            printf("test %s\n", find_folder_sector+block_bytes_displacement);
+            write_sector(find_record_sector, find_folder_sector+block_bytes_displacement); // Atualiza apenas o setor modificado do bloco
+            /*write_sector(currentSector, find_folder_sector);*/
 
             // Atualiza o bitmap
             markBlockBitmap(currentBlock, SET_BIT);
@@ -915,7 +961,6 @@ int t2fs_close(t2fs_file handle){
     return -1;
 }
 
-
 // Função que cria um novo arquivo do sistema de arquivos no disco físico
 t2fs_file t2fs_create(char *name){
     char* validatedName;
@@ -944,13 +989,54 @@ t2fs_file t2fs_create(char *name){
     if (newFile->handle >= 0 && countOpenFiles <= 20){
         // Salva arquivo no disco e atualiza apontadores
         printf("diskInsertRecord %s\n", name);
-        diskInsertRecord(&newFile->record, validateFolderName(name));
+        int insert_record = diskInsertRecord(&newFile->record, validateFolderName(name));
+
+        // Garante que inseriu record com sucesso
+        if (insert_record < 0){
+            t2fs_close(newFile->handle);
+            return -1;
+        }
     }
     else {
         return -1;
     }
 
     return newFile->handle;
+}
+
+// Função que cria uma nova pasta no sistema de arquivos no disco físico
+t2fs_file t2fs_create_folder(char *name){
+    char* validatedName;
+
+    // Inicializa o disco
+    if(!diskInitialized){
+        t2fs_first(&superblock);
+    }
+
+    // Valida o nome do arquivo
+    validatedName = validateFileName(name);
+
+    // Monta arquivo a ser salvo no disco
+    struct file* newFile = malloc(sizeof(struct file));
+    memcpy(newFile->record.name, validatedName, sizeof(char)*MAX_FILE_NAME);
+    newFile->record.TypeVal = 0x02; // 0xFF (registro inválido) OU  0x01 (arquivo regular) OU 0x02 (arquivo de diretório)
+    newFile->record.blocksFileSize = 0;
+    newFile->record.bytesFileSize = 0;
+    newFile->record.dataPtr[0] = 0xFFFFFFFF;
+    newFile->record.dataPtr[1] = 0xFFFFFFFF;
+    newFile->record.singleIndPtr = 0xFFFFFFFF;
+    newFile->record.doubleIndPtr = 0xFFFFFFFF;
+
+    // Salva pasta no disco e atualiza apontadores
+    printf("diskInsertFolder %s\n", name);
+    int insert_folder = diskInsertRecord(&newFile->record, validateFolderName(name));
+
+    // Garante que inseriu record com sucesso
+    if (insert_folder < 0){
+        return -1;
+    }
+
+    return 1;
 }
 
 //Reposiciona o current pointer do arquivo
