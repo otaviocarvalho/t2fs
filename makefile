@@ -24,6 +24,11 @@ APP_MKDIR_BIN = bin/mkdirt2
 APP_RMDIR_SRC = src/rmdirt2.c
 APP_RMDIR_BIN = bin/rmdirt2
 
+teste_delete_run: teste_delete_compile
+		./$(TESTE_DELETE)
+teste_delete_compile: teste_seek_run
+		gcc $(TESTE_DELETE).c -o $(TESTE_DELETE) $(FLAGS_TESTES_64)
+
 teste_seek_run: teste_seek_compile
 		./$(TESTE_SEEK)
 teste_seek_compile: teste_write_run
@@ -31,7 +36,7 @@ teste_seek_compile: teste_write_run
 
 teste_write_run: teste_write_compile
 		./$(TESTE_WRITE)
-teste_write_compile: teste_read_run
+teste_write_compile: app_rmdir_compile
 		gcc $(TESTE_WRITE).c -o $(TESTE_WRITE) $(FLAGS_TESTES_64)
 
 teste_read_run: teste_read_compile
@@ -46,13 +51,8 @@ teste_open_compile: teste_create_run
 
 teste_create_run: teste_create_compile
 		./$(TESTE_CREATE)
-teste_create_compile: teste_delete_run
+teste_create_compile: teste_identify_run
 		gcc $(TESTE_CREATE).c -o $(TESTE_CREATE) $(FLAGS_TESTES_64)
-
-teste_delete_run: teste_delete_compile
-		./$(TESTE_DELETE)
-teste_delete_compile: teste_identify_run
-		gcc $(TESTE_DELETE).c -o $(TESTE_DELETE) $(FLAGS_TESTES_64)
 
 teste_identify_run: teste_identify_compile
 		./$(TESTE_IDENTIFY)
@@ -76,4 +76,4 @@ $(OBJ_T2FS): $(SRC_T2FS)
 		gcc -c $(SRC_T2FS) -o $(OBJ_T2FS) $(FLAGS)
 
 clean:
-		rm -rf $(OUT_LIB) $(OBJ_T2FS) $(TESTE_IDENTIFY) $(TESTE_DELETE) $(TESTE_CREATE)
+		rm -rf $(OUT_LIB) $(OBJ_T2FS) $(TESTE_IDENTIFY) $(TESTE_DELETE) $(TESTE_CREATE) $(TESTE_OPEN) $(TESTE_READ) $(TESTE_WRITE) $(TESTE_SEEK) $(APP_COPY_BIN) $(APP_DIR_BIN) $(APP_MKDIR_BIN) $(APP_RMDIR_BIN)

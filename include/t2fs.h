@@ -88,6 +88,9 @@ char *t2fs_identify (void);
 /** Função usada para criar um novo arquivo no disco. */
 t2fs_file t2fs_create (char *nome);
 
+/** Função usada para criar um novo diretório no disco. */
+t2fs_file t2fs_create_folder (char *nome);
+
 /** Função usada para remover (apagar) um arquivo do disco. */
 int t2fs_delete (char *nome);
 
