@@ -190,55 +190,6 @@ void initDisk(struct t2fs_superbloco *sblock){
 
     // Ativa a flag de conclusão da inicialização do disco
     diskInitialized = 1;
-
-    // Remover abaixo
-/*    // Teste de impressão do t2fs_record do diretório raiz*/
-    /*printf("\nprint diretório raiz t2fs_record:\n");*/
-    /*printf("%s\n", diskRootDirReg.name);*/
-    /*printf("blocksFileSize: %ld\n", (unsigned long int) diskRootDirReg.blocksFileSize);*/
-    /*printf("bytesFileSize: %ld\n", (unsigned long int) diskRootDirReg.bytesFileSize);*/
-    /*printf("dataPtr[0]: %x\n", diskRootDirReg.dataPtr[0]);*/
-    /*printf("dataPtr[1]: %x\n", diskRootDirReg.dataPtr[1]);*/
-    /*printf("singleIndPtr: %x\n", diskRootDirReg.singleIndPtr);*/
-    /*printf("doubleIndPtr: %x\n", diskRootDirReg.doubleIndPtr);*/
-
-    // Teste de leitura do bitmap
-    char *find = malloc(SIZE_SECTOR_BYTES);
-    read_sector(convertBlockToSector(diskBlockSize, diskBitMapReg.dataPtr[0]), find);
-    int i;
-    for (i = 0; i < (diskBitMapReg.bytesFileSize/8)*(diskBlockSize/SIZE_SECTOR_BYTES); i++) {
-        printf("%d %x\n",i, (unsigned char) find[i]);
-    }
-
-    // Teste de varredura dos arquivos/pastas de um diretório
-    char *find_folder = malloc(SIZE_SECTOR_BYTES*(diskBlockSize/SIZE_SECTOR_BYTES)); // Lê um setor do disco 'físico'
-    printf("%d -> %d\n", diskRootDirReg.dataPtr[0], convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0]));
-
-    int j;
-    for (j = 0; j < diskBlockSize/SIZE_SECTOR_BYTES; j++) {
-        printf("%d\n",convertBlockToSector(diskBlockSize, 8)+j);
-        read_sector(convertBlockToSector(diskBlockSize, 8)+j, find_folder+(j*SIZE_SECTOR_BYTES));
-        /*printf("%d\n",convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0])+j);*/
-        /*read_sector(convertBlockToSector(diskBlockSize, diskRootDirReg.dataPtr[0])+j, find_folder+(j*SIZE_SECTOR_BYTES));*/
-    }
-
-    int k=0;
-    struct t2fs_record *read_rec = malloc(sizeof(struct t2fs_record));
-    while(k < SIZE_SECTOR_BYTES*4){
-        memcpy(read_rec, find_folder+k, sizeof(struct t2fs_record));
-        printf("%s\n", read_rec->name);
-        printf("tipo: %x\n", read_rec->TypeVal);
-        printf("blocks size: %d\n", read_rec->blocksFileSize);
-        printf("bytes size: %d\n", read_rec->bytesFileSize);
-        printf("bloco direto[0]: %x\n", read_rec->dataPtr[0]);
-        printf("bloco direto[1]: %x\n", read_rec->dataPtr[1]);
-        printf("singleIndPtr: %x\n", read_rec->singleIndPtr);
-        printf("doubleIndPtr: %x\n", read_rec->doubleIndPtr);
-
-        k += sizeof(struct t2fs_record);
-    }
-    free(read_rec);
-    free(find_folder);
 }
 
 // Função que lê o superbloco do disco na inicialização
